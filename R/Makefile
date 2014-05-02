@@ -63,6 +63,15 @@ dipp-rf-uniq-metagenome.RData:
 		--metadata $(METADATA) \
 		--taxonomies $(METAGENOME_TAX)
 
+dipp-qpcr.RData:
+	bin/write-rdata \
+		--unique \
+		--output $@ \
+		--otutable $(METAGENOME) \
+		--metadata $(METADATA) \
+		--taxonomies $(TAXONOMIES) \
+		--normalize $(NORMALIZE)
+
 
 sliding-window-%.pdf: dipp-rf-uniq.RData
 	bin/sliding-window-smooth \
