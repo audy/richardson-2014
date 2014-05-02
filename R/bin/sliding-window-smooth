@@ -4,7 +4,7 @@ library(optparse)
 
 option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.RData'),
                  make_option('--rank', type='character', default='Species'),
-                 make_option('--width', type='numeric', default=51),
+                 make_option('--width', type='numeric', default=101),
                  make_option('--output', type='character', default='RPlots.pdf'),
                  make_option('--top', type='numeric', default=4),
                  make_option('--test', type='character', default='glm')
@@ -12,6 +12,10 @@ option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.
 
 source('lib/se.R')
 source('lib/ggplot_theme.R')
+
+vars <- c('vaginal_delivery',
+          'Gender',
+          'breast_feeding')
 
 parser <- OptionParser(option_list = option_list)
 options <- parse_args(parser)
@@ -21,9 +25,9 @@ library(zoo)
 library(plyr)
 library(ggplot2)
 library(qvalue)
-library(doParallel)
 
-registerDoParallel(cores=4)
+library(doParallel)
+registerDoParallel(cores=options$top)
 
 load(options$input)
 
@@ -47,13 +51,11 @@ df <- psmelt(glom)
 # for each OTU at Rank
 
 # sort by age
+
 df <- df[with(df, order(age_at_sampling)),]
 
-# "extra variables"
-vars <- c('vaginal_delivery',
-          'Gender')
-
 # take only what we need
+
 n <- df[,c(vars, 'seroconverted', 'age_at_sampling', options$rank, 'Abundance', 'dipp_person')]
 
 form <- parse(text=paste('~', options$rank))
@@ -61,18 +63,20 @@ form <- parse(text=paste('~', options$rank))
 smoothed <- ddply(n, eval(form), .parallel=T, function(d) {
   data.frame(rollapply(rownames(d), options$width, function(i) {
     ss <- d[i,] # the slow part! (fixme)
-    r <- range(ss$age_at_sampling)
-    d <- max(ss$age_at_sampling) - min(ss$age_at_sampling)
-    n <- nrow(ss)
+
+    r <- range(ss$age_at_sampling) # range
+    d <- max(ss$age_at_sampling) - min(ss$age_at_sampling) # width
+    n <- nrow(ss) # number of samples
 
     cat('range:', r, 'width:', d, 'count:', n, '\n')
 
-    downsampled <- ddply(ss, ~ dipp_person, function(y) {
+   downsampled <- ddply(ss, ~ dipp_person, function(y) {
       c(Abundance=median(y$Abundance),
         age_at_sampling=median(y$age_at_sampling),
         seroconverted=y[1,]$seroconverted,
         Gender=y[1,]$Gender,
-        vaginal_delivery=y[1,]$vaginal_delivery
+        vaginal_delivery=y[1,]$vaginal_delivery,
+        breast_feeding=y[1,]$breast_feeding
        )
     })
 
@@ -91,21 +95,27 @@ smoothed <- ddply(n, eval(form), .parallel=T, function(d) {
             abundance.se=se(y$Abundance),
             age=median(y$age_at_sampling))
     })
+
     averaged$p.value <- p.value
+    averaged$p.adjust <- p.adjust(averaged$p.value, 'BH')
     averaged$ll1 <- ll1
     averaged$ll2 <- ll2
+    averaged$width <- d
+    averaged$count <- nrow(averaged)
+    averaged$n_cases <- nrow(averaged[averaged$seroconverted,])
+    averaged$n_controls <- nrow(!averaged[averaged$seroconverted,])
     return(averaged)
   }))
 })
 
 # plot it!
 
-pdf(options$output, 8, 10, colormodel='cmyk')
+#pdf(options$output, 8, 10, colormodel='cmyk')
+
+# smoothed <- smoothed[smoothed$width < 50,]
 
 smoothed$seroconverted <- as.factor(smoothed$seroconverted)
 smoothed <- smoothed[complete.cases(smoothed),]
-
-smoothed$q.value <- qvalue(smoothed$p.value)$qvalue
 
 ggplot(smoothed,
        aes_string(x='age',
@@ -117,14 +127,33 @@ facet_grid(seroconverted ~ .)
 form <- parse(text=paste('~', options$rank))
 
 
-ggplot(smoothed,
-       aes_string(x='age',
-           y='abundance',
-           fill='seroconverted')) +
-facet_wrap(eval(form), scale='free_y') +
-geom_ribbon(aes(ymin = abundance - abundance.se, ymax= abundance + abundance.se), alpha=0.5) +
-geom_rug(aes(color=q.value < 0.05), sides='b') +
-xlim(min(smoothed$age), 600) +
+ggplot(smoothed, aes(x=p.value, color=Species)) +
+geom_density() +
+geom_vline(x=0.05) +
 ggplot.theme
 
-dev.off()
+
+ggplot(n,
+       aes(x=age_at_sampling,
+           y=Abundance,
+           color=seroconverted)) +
+geom_smooth()
+
+ggplot(smoothed,
+       aes_string(x='age',
+                  y='abundance',
+               fill='seroconverted')) +
+facet_wrap(eval(form), scale='free_y') +
+geom_ribbon(aes(ymin = abundance - abundance.se,
+                ymax= abundance + abundance.se), alpha=0.5) +
+geom_rug(aes(color=p.adjust < 0.05), sides='b') +
+geom_vline(x=479) +
+geom_vline(x=479+69, linetype='dashed') +
+geom_vline(x=479-69, linetype='dashed') +
+ggplot.theme +
+ggplot.pal.sig +
+ggplot.pal.scale
+
+median(smoothed$width)
+
+#dev.off()
