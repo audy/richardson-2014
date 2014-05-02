@@ -2,15 +2,41 @@
 
 library(plyr)
 library(phyloseq)
-
-load('dipp-rarefied-phyloseq.RData')
-
 source('lib/se.R')
 
-meta <- data.frame(dipp@sam_data)
+load('dipp-rf-uniq.RData')
+
+meta <- data.frame(sample_data(dipp))
+taxa <- taxa_names(dipp)
+
+cat('- number of samples:', nrow(meta), '\n')
+cat('- number of OTUs:', length(taxa), '\n')
 
 sorted <- meta[with(meta, order(age_at_sampling)),]
 
 subjects <- ddply(sorted, ~ dipp_person, function(x) x[1,])
 
-summary(subjects)
+cases <- subjects[subjects$seroconverted,]
+controls <- subjects[!subjects$seroconverted,]
+
+t1d <- subjects[subjects$has_T1D,]
+
+cat('- number of cases:', nrow(cases), '\n')
+cat('- number of controls:', nrow(controls), '\n')
+cat('- number of T1D:', nrow(t1d), '\n')
+
+cat('- cases GAD:', nrow(cases[cases$aa_GADA,]), '\n')
+cat('- cases IA2A:', nrow(cases[cases$aa_IA2A,]), '\n')
+cat('- cases ICA:', nrow(cases[cases$aa_IAA,]), '\n')
+cat('- cases IAA:', nrow(cases[cases$aa_ICA,]), '\n')
+
+cat('- cases 1AA', nrow(cases[cases$aa_number == 1,]), '\n')
+cat('- cases 2AA', nrow(cases[cases$aa_number == 2,]), '\n')
+cat('- cases 3AA', nrow(cases[cases$aa_number == 3,]), '\n')
+cat('- cases 4AA', nrow(cases[cases$aa_number == 4,]), '\n')
+
+cat('- mean days until 1AA:', mean(cases$days_until_1AA), '\n')
+cat('- mean days until 2AA:', mean(cases$days_until_2AA), '\n')
+
+cat('- mean days until 1AA:', mean(cases$days_until_1AA), '\n')
+cat('- mean days until 2AA:', mean(cases$days_until_2AA), '\n')
