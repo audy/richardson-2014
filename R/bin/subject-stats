@@ -35,8 +35,7 @@ cat('- cases 2AA', nrow(cases[cases$aa_number == 2,]), '\n')
 cat('- cases 3AA', nrow(cases[cases$aa_number == 3,]), '\n')
 cat('- cases 4AA', nrow(cases[cases$aa_number == 4,]), '\n')
 
-cat('- mean days until 1AA:', mean(cases$days_until_1AA), '\n')
-cat('- mean days until 2AA:', mean(cases$days_until_2AA), '\n')
-
-cat('- mean days until 1AA:', mean(cases$days_until_1AA), '\n')
-cat('- mean days until 2AA:', mean(cases$days_until_2AA), '\n')
+cat('- mean days until 1AA:', mean(cases$days_until_1AA), 'se =', se(cases$days_until_1AA), '\n')
+cat('- mean days until 2AA:', mean(cases$days_until_2AA), 'se =', se(cases$days_until_2AA), '\n')
+cat('- mean days until 3AA:', mean(cases$days_until_3AA), 'se =', se(cases$days_until_3AA), '\n')
+cat('- mean days until 4AA:', mean(cases$days_until_4AA), 'se =', se(cases$days_until_4AA), '\n')
