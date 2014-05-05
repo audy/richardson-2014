@@ -105,6 +105,9 @@ combined <- do.call('rbind', sliding.avg)
 
 limits <- aes(ymin = median - err, ymax = median + err)
 
+combined$status <- factor(combined$seroconverted,
+                          labels=c('Case', 'Control'))
+
 sig_palette <- c("#218457", # 0.05
                  "#FFFFFF") # insignificant
 
@@ -124,9 +127,6 @@ ggplot(combined,
            y=n)) +
 geom_line()
 
-combined$status <- factor(combined$seroconverted,
-                          labels=c('Case', 'Control'))
-
 ggplot(combined,
        aes(x=age_at_sampling,
            y=abundance,
@@ -136,11 +136,17 @@ geom_ribbon(aes(ymin = abundance - abundance.se,
             alpha=0.5) +
 facet_wrap(~variable,
            scale='free_y') +
-xlim(100, 600) + 
+xlim(100, 800) + 
 geom_rug(aes(color=p.adjusted < 0.05), sides='b') +
 scale_y_continuous(labels=percent) +
 ggplot.pal.sig +
 ggplot.theme +
-ggplot.pal.scale
+ggplot.pal.scale + 
+geom_vline(x=479, color='purple', alpha=0.75) +
+geom_vline(x=479-68, linetype='dashed', color='purple', alpha=0.75) +
+geom_vline(x=479+68, linetype='dashed', color='purple', alpha=0.75) +
+ylab('Relative Abundance') +
+ggtitle(options$rank) +
+theme(strip.text=element_text(face='italic'))
 
 dev.off()
