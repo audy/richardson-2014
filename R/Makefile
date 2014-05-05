@@ -8,7 +8,7 @@ METAGENOME_TAX?='../data/dipp-kegg_orthologies.csv'
 NORMALIZE?='edger'
 FDR?='BH'
 WIDTH?=201
-TOP?=12
+TOP?=4
 
 TESTMETHOD?='glm'
 
