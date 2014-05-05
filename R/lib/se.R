@@ -3,6 +3,6 @@ se <- function(x) {
   if (length(x) == 1) {
     0
   } else {
-    sd(x)/sqrt(length(x))
+    sd(x, na.rm=T)/sqrt(length(x))
   }
 }

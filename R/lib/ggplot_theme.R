@@ -14,7 +14,5 @@ ggplot.pal.scale <- scale_fill_manual(values=c("#FFAB00", # cases
                                         )
 
 
-ggplot.pal.sig <- scale_colour_manual(values=c("#218457", # 0.05
-                                  "#00B060", # 0.01
-                                   "#FFFFFF") # insignificant
-)
+ggplot.pal.sig <-
+  scale_colour_manual(values=c("#FFFFFF", "#218457" ))
