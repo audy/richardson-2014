@@ -3,157 +3,144 @@
 library(optparse)
 
 option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.RData'),
-                 make_option('--rank', type='character', default='Species'),
-                 make_option('--width', type='numeric', default=101),
-                 make_option('--output', type='character', default='RPlots.pdf'),
+                 make_option('--output', type='character', default='Rplots.pdf'),
+                 make_option('--width', type='numeric', default=201),
                  make_option('--top', type='numeric', default=4),
-                 make_option('--test', type='character', default='glm')
+                 make_option('--rank', default='Species'),
+                 make_option('--fdr', default='BH'),
+                 make_option('--by', default=30)
                 )
-
-source('lib/se.R')
-source('lib/ggplot_theme.R')
-
-vars <- c('vaginal_delivery',
-          'Gender',
-          'breast_feeding')
 
 parser <- OptionParser(option_list = option_list)
 options <- parse_args(parser)
 
 library(phyloseq)
-library(zoo)
 library(plyr)
-library(ggplot2)
+library(scales)
+library(reshape2)
 library(qvalue)
 
-library(doParallel)
-registerDoParallel(cores=options$top)
+source('lib/sliding_window.R')
+source('lib/ggplot_theme.R')
+source('lib/se.R')
 
 load(options$input)
 
-glom <- tax_glom(dipp, taxrank = options$rank)
+glom <- tax_glom(dipp, taxrank=options$rank)
 
-form <- parse(text=paste(options$rank, '%in%', 'names(top_phy)'))
 top_phy <- sort(tapply(taxa_sums(glom), tax_table(glom)[, options$rank], sum), decreasing=TRUE)[1:options$top]
-glom <- subset_taxa(glom, eval(form))
+form <- parse(text=paste(options$rank, '%in%', 'names(top_phy)'))
+top <- subset_taxa(glom, eval(form))
 
-df <- psmelt(glom)
+first <- min(sample_data(glom)$age_at_sampling)
+last <- max(sample_data(glom)$age_at_sampling)
 
-# do this if you want equal-sized windows
-# TODO make this optional.
-# --equal_windows or something...
-#start <- min(df$age_at_sampling)
-#stop <- max(600)
-#fake_df <- data.frame(age_at_sampling = start:stop)
-#merged <- merge(fake_df, df, all=T)
+start_times <- first:last
+start_times <- start_times[seq(1, length(start_times), options$by)]
 
-# calculate rolling median and rolling standard error
-# for each OTU at Rank
+phy <- top
 
-# sort by age
+subsets <- generate_subsets(phy, start_times, options$width)
 
-df <- df[with(df, order(age_at_sampling)),]
+vars <- c('Gender',
+          'vaginal_delivery',
+          'breast_feeding')
 
-# take only what we need
+sliding.avg <- lapply(subsets, function(s) {
+  cat("I'm goin'\n")
+  # get otus and metadata
+  otus <- data.frame(otu_table(s), check.names=F)
+  meta <- data.frame(sample_data(s))
 
-n <- df[,c(vars, 'seroconverted', 'age_at_sampling', options$rank, 'Abundance', 'dipp_person')]
+  # get names of taxa
+  names <- data.frame(tax_table(s)[taxa_names(s)])[,options$rank]
+  colnames(otus) <- names
 
-form <- parse(text=paste('~', options$rank))
+  # add relevant vars to otu data frame
+  otus$seroconverted <- meta$seroconverted
+  otus$age_at_sampling <- meta$age_at_sampling
+  otus$dipp_person <- meta$dipp_person
 
-smoothed <- ddply(n, eval(form), .parallel=T, function(d) {
-  data.frame(rollapply(rownames(d), options$width, function(i) {
-    ss <- d[i,] # the slow part! (fixme)
+  for (v in vars) otus[,v] <- meta[,v]
 
-    r <- range(ss$age_at_sampling) # range
-    d <- max(ss$age_at_sampling) - min(ss$age_at_sampling) # width
-    n <- nrow(ss) # number of samples
+  # melt metadata
+  mdat <- melt(otus, c('seroconverted', 'age_at_sampling', 'dipp_person', vars))
 
-    cat('range:', r, 'width:', d, 'count:', n, '\n')
+  # downsample by person by taking the median
+  downsampled <- ddply(mdat, variable~seroconverted+dipp_person, function(x) {
+       c(age_at_sampling=median(x$age_at_sampling),
+         median=median(x$value),
+         Gender=x[1,]$Gender,
+         vaginal_delivery=x[1,]$vaginal_delivery,
+         breast_feeding=x[1,]$breast_feeding)
+  })
 
-   downsampled <- ddply(ss, ~ dipp_person, function(y) {
-      c(Abundance=median(y$Abundance),
-        age_at_sampling=median(y$age_at_sampling),
-        seroconverted=y[1,]$seroconverted,
-        Gender=y[1,]$Gender,
-        vaginal_delivery=y[1,]$vaginal_delivery,
-        breast_feeding=y[1,]$breast_feeding
-       )
-    })
+  pvals <- ddply(downsampled, ~variable, function(x) {
+      m1 <- glm(median ~ Gender + vaginal_delivery + breast_feeding, data=x)
+      m2 <- glm(seroconverted ~ residuals(m1), data=x)
+      c(p.value=anova(m2, test='Chisq')[[5]][[2]])
+  })
 
-    if (options$test == 'wilcox') {
-      p.value <- wilcox.test(Abundance ~ seroconverted, data=downsampled, exact=FALSE)$p.value
-    } else if (options$test == 'glm') {
-      m1 <- glm(Abundance ~ Gender + vaginal_delivery, data=downsampled)
-      m2 <- glm(seroconverted ~ residuals(m1), data=downsampled)
-      p.value <- anova(m2, test='Chisq')[[5]][[2]]
-      ll2 <- logLik(m2)
-      ll1 <- logLik(m1)
-    }
+  # TODO correct for multiple hypothesis testing
 
-    averaged <- ddply(downsampled, ~ seroconverted, function(y) {
-          c(abundance=median(y$Abundance),
-            abundance.se=se(y$Abundance),
-            age=median(y$age_at_sampling))
-    })
+  averaged <- ddply(downsampled, ~variable+seroconverted, function(x) {
+     c(abundance=median(x$median),
+       abundance.se=se(x$median),
+       age_at_sampling=median(x$age_at_sampling))
+  })
 
-    averaged$p.value <- p.value
-    averaged$p.adjust <- p.adjust(averaged$p.value, 'BH')
-    averaged$ll1 <- ll1
-    averaged$ll2 <- ll2
-    averaged$width <- d
-    averaged$count <- nrow(averaged)
-    averaged$n_cases <- nrow(averaged[averaged$seroconverted,])
-    averaged$n_controls <- nrow(!averaged[averaged$seroconverted,])
-    return(averaged)
-  }))
+  # get median, confidence intervals and add pvalue in one table
+  merged <- merge(averaged, pvals, by.x='variable', by.y='variable', all=T)
+
+  merged$width <- max(otus$age_at_sampling) - min(otus$age_at_sampling)
+  merged$n <- nrow(otus)
+  merged$p.adjusted <- p.adjust(merged$p.value, options$fdr)
+  merged$n.cases <- nrow(otus[otus$seroconverted,])
+  merged$n.controls <- nrow(otus[!otus$seroconverted,])
+
+  merged 
 })
 
-# plot it!
+combined <- do.call('rbind', sliding.avg)
 
-#pdf(options$output, 8, 10, colormodel='cmyk')
+limits <- aes(ymin = median - err, ymax = median + err)
 
-# smoothed <- smoothed[smoothed$width < 50,]
+sig_palette <- c("#218457", # 0.05
+                 "#FFFFFF") # insignificant
 
-smoothed$seroconverted <- as.factor(smoothed$seroconverted)
-smoothed <- smoothed[complete.cases(smoothed),]
+ggplot.pal.sig <-
+  scale_colour_manual(values=c("#FFFFFF", "#218457" ))
 
-ggplot(smoothed,
-       aes_string(x='age',
-                  y='abundance',
-                  color=options$rank)) +
-geom_point() +
-facet_grid(seroconverted ~ .)
+pdf(options$output)
 
-form <- parse(text=paste('~', options$rank))
-
-
-ggplot(smoothed, aes(x=p.value, color=Species)) +
+ggplot(combined,
+       aes(x=p.value,
+           color=variable)) +
 geom_density() +
-geom_vline(x=0.05) +
-ggplot.theme
+geom_vline(x=0.05)
 
-
-ggplot(n,
+ggplot(combined,
        aes(x=age_at_sampling,
-           y=Abundance,
-           color=seroconverted)) +
-geom_smooth()
+           y=n)) +
+geom_line()
 
-ggplot(smoothed,
-       aes_string(x='age',
-                  y='abundance',
-               fill='seroconverted')) +
-facet_wrap(eval(form), scale='free_y') +
+combined$status <- factor(combined$seroconverted,
+                          labels=c('Case', 'Control'))
+
+ggplot(combined,
+       aes(x=age_at_sampling,
+           y=abundance,
+           fill=status)) +
 geom_ribbon(aes(ymin = abundance - abundance.se,
-                ymax= abundance + abundance.se), alpha=0.5) +
-geom_rug(aes(color=p.adjust < 0.05), sides='b') +
-geom_vline(x=479) +
-geom_vline(x=479+69, linetype='dashed') +
-geom_vline(x=479-69, linetype='dashed') +
-ggplot.theme +
+                ymax = abundance + abundance.se),
+            alpha=0.5) +
+facet_wrap(~variable,
+           scale='free_y') +
+xlim(100, 600) + 
+geom_rug(aes(color=p.adjusted < 0.05), sides='b') +
+scale_y_continuous(labels=percent) +
 ggplot.pal.sig +
+ggplot.theme +
 ggplot.pal.scale
 
-median(smoothed$width)
-
-#dev.off()
+dev.off()
