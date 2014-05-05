@@ -6,8 +6,8 @@ TAXONOMIES?='../data/dipp-tax_table-merged_bacteroides.csv'
 METAGENOME?='../data/dipp-predicted_metagenome.csv'
 METAGENOME_TAX?='../data/dipp-kegg_orthologies.csv'
 NORMALIZE?='edger'
-FDR?='BY'
-WIDTH?=51
+FDR?='BH'
+WIDTH?=201
 TOP?=12
 
 TESTMETHOD?='glm'
@@ -74,13 +74,13 @@ dipp-qpcr.RData:
 
 
 sliding-window-%.pdf: dipp-rf-uniq.RData
-	bin/sliding-window-smooth \
+	bin/orig-sliding-window \
 		--rank $* \
 		--output $@ \
 		--input $< \
 		--width $(WIDTH) \
 		--top $(TOP) \
-		--test $(TESTMETHOD)
+		--by 10
 
 phyloseq: dipp-rf-uniq.RData
 
