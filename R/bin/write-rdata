@@ -76,7 +76,6 @@ br()
 
 if (options$normalize == 'rarefaction') {
   cat('rarefying\n')
-  dipp <- rarefy_even_depth(dipp, options$depth)
 } else if (options$normalize == 'edger') {
   cat('applying edgeR normalization\n')
   dipp <- edgeRnorm(dipp)
@@ -96,6 +95,9 @@ if (options$proportion == TRUE) {
 cat("Final object\n")
 dipp
 br()
+
+# enforce orientation of OTU table
+if (taxa_are_rows(dipp)) dipp <- t(dipp)
 
 cat(paste("Saving to", options$output, "\n"))
 save(dipp, file=options$output)
