@@ -7,7 +7,7 @@ option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.
                  make_option('--width', type='numeric', default=201),
                  make_option('--top', type='numeric', default=4),
                  make_option('--rank', default='Species'),
-                 make_option('--fdr', default='BH'),
+                 make_option('--fdr', default='BY'),
                  make_option('--by', default=30)
                 )
 
