@@ -9,6 +9,7 @@ NORMALIZE?='edger'
 FDR?='BH'
 WIDTH?=201
 TOP?=4
+BY?=10
 
 TESTMETHOD?='glm'
 
@@ -80,7 +81,7 @@ sliding-window-%.pdf: dipp-rf-uniq.RData
 		--input $< \
 		--width $(WIDTH) \
 		--top $(TOP) \
-		--by 10
+		--by $(BY)
 
 phyloseq: dipp-rf-uniq.RData
 
