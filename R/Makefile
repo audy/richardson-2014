@@ -5,6 +5,7 @@ METADATA?='../data/dipp-sample_data.csv'
 TAXONOMIES?='../data/dipp-tax_table-merged_bacteroides.csv'
 METAGENOME?='../data/dipp-predicted_metagenome.csv'
 METAGENOME_TAX?='../data/dipp-kegg_orthologies.csv'
+QPCR='../data/dorei-vulgatus-predicted-copies.csv'
 NORMALIZE?='edger'
 FDR?='BH'
 WIDTH?=201
