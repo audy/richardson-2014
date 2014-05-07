@@ -134,6 +134,11 @@ ggplot(combined[combined$age_at_sampling < 600 & combined$age_at_sampling > 100,
            color=variable)) +
 geom_boxplot()
 
+ggplot(combined,
+       aes(x=w)) +
+geom_boxplot() +
+ggtitle(paste(median(combined$w), se(combined$w)))
+
 #
 # Set colors for significance levels
 #
