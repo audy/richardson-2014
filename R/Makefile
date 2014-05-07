@@ -88,6 +88,20 @@ phyloseq: dipp-rf-uniq.RData
 
 picrust: picrust-X0.pdf picrust-X1.pdf picrust-X2.pdf picrust-X3.pdf
 
+glmulti-%.txt: dipp-rf-uniq.RData
+	bin/glmulti-analysis \
+		--input $< \
+		--rank $% \
+		--top $(TOP) \
+		> $@
+
+glmulti-picrust-%.txt: dipp-rf-uniq-metagenome.RData
+	bin/glmulti-analysis \
+		--input $< \
+		--rank $% \
+		--top $(TOP) \
+		> $@
+
 picrust-%.pdf: dipp-rf-uniq-metagenome.RData
 	bin/sliding-window-smooth \
 		--rank $* \
