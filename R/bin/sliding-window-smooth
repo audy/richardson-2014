@@ -8,7 +8,8 @@ option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.
                  make_option('--top', type='numeric', default=4),
                  make_option('--rank', default='Species'),
                  make_option('--fdr', default='BY'),
-                 make_option('--by', default=30)
+                 make_option('--by', default=30),
+                 make_option('--absolute', type='logical', action='store_true', default=FALSE)
                 )
 
 parser <- OptionParser(option_list = option_list)
@@ -18,12 +19,13 @@ library(phyloseq)
 library(plyr)
 library(scales)
 library(reshape2)
-library(qvalue)
+options$absolute = TRUE
 
 source('lib/sliding_window.R')
 source('lib/ggplot_theme.R')
 source('lib/se.R')
 
+cat('Loading', options$input, '\n')
 load(options$input)
 
 glom <- tax_glom(dipp, taxrank=options$rank)
@@ -78,7 +80,11 @@ sliding.avg <- lapply(subsets, function(s) {
   pvals <- ddply(downsampled, ~variable, function(x) {
       m1 <- glm(median ~ Gender + vaginal_delivery + breast_feeding, data=x)
       m2 <- glm(seroconverted ~ residuals(m1), data=x)
-      c(p.value=anova(m2, test='Chisq')[[5]][[2]])
+      res <- median(residuals(m2, type="deviance"))
+      prob <- predict(m2 ,type=c("response"))
+      roc_auc <- tryCatch({ roc(seroconverted ~ prob, data = x)$auc },
+               error = function(e) { NA })
+      c(p.value=anova(m2, test='Chisq')[[5]][[2]], res=res,auc=roc_auc)
   })
 
   # TODO correct for multiple hypothesis testing
@@ -97,27 +103,22 @@ sliding.avg <- lapply(subsets, function(s) {
   merged$p.adjusted <- p.adjust(merged$p.value, options$fdr)
   merged$n.cases <- nrow(otus[otus$seroconverted,])
   merged$n.controls <- nrow(otus[!otus$seroconverted,])
-
   merged 
 })
 
 combined <- do.call('rbind', sliding.avg)
+combined <- combined[complete.cases(combined),]
 
 limits <- aes(ymin = median - err, ymax = median + err)
 
-combined$status <- factor(combined$seroconverted,
-                          labels=c('Case', 'Control'))
+combined$status <- factor(combined$seroconverted)
 
-sig_palette <- c("#218457", # 0.05
-                 "#FFFFFF") # insignificant
-
-ggplot.pal.sig <-
-  scale_colour_manual(values=c("#FFFFFF", "#218457" ))
+min(combined$p.adjusted)
 
 pdf(options$output)
 
 ggplot(combined,
-       aes(x=p.value,
+       aes(x=p.adjusted,
            color=variable)) +
 geom_density() +
 geom_vline(x=0.05)
@@ -127,26 +128,90 @@ ggplot(combined,
            y=n)) +
 geom_line()
 
+ggplot(combined[combined$age_at_sampling < 600 & combined$age_at_sampling > 100,],
+       aes(x=seroconverted,
+           y=auc,
+           color=variable)) +
+geom_boxplot()
+
+#
+# Set colors for significance levels
+#
+
+sig.colours <- c(insignificant="#FFFFFF")
+if (min(combined$p.adjusted) < 0.05) sig.colours <- c(sig.colours, '0.05'="#218457")
+if (min(combined$p.adjusted) < 0.01) sig.colours <- c(sig.colours, '0.01'="#FF0000") # throw a party
+if (min(combined$p.adjusted) < 0.001) sig.colours <- c(sig.colours, '0.001'="#00FF00") # throw a party
+
+sig.scale <- scale_colour_manual(values=sig.colours)
+
+combined$significance <- 'insignificant'
+combined[combined$p.adjusted < 0.05,]$significance <- '0.05'
+combined[combined$p.adjusted < 0.01,]$significance <- '0.01'
+combined[combined$p.adjusted < 0.001,]$significance <- '0.001'
+combined$significance <- as.factor(combined$significance)
+
+
+if (options$absolute) {
+  yscale <- scale_y_continuous(labels=scientific)
+  ylab <- ylab('Predicted Copy Number')
+} else {
+  yscale <- scale_y_continuous(labels=percent)
+  ylab <- ylab('Relative Abundance')
+}
+
+##
+# AUC PLOT
+#
+ggplot(combined[combined$variable == 'dorei-vulgatus',],
+       aes(x=age_at_sampling,
+           y=auc)) +
+geom_line(color='gray') +
+geom_point() +
+xlim(100, 600) +
+geom_rug(aes(color=significance), sides='bl') +
+facet_wrap(~variable) +
+sig.scale +
+geom_hline(y=0.7, linetype='dashed') + 
+geom_vline(x=479, color='purple', alpha=0.75) +
+geom_vline(x=479-68, linetype='dashed', color='purple', alpha=0.75) +
+geom_vline(x=479+68, linetype='dashed', color='purple', alpha=0.75) +
+ggplot.theme +
+ylab('AUC') +
+xlab('Subject Age (days)')
+
+
 ggplot(combined,
        aes(x=age_at_sampling,
            y=abundance,
-           fill=status)) +
+           fill=seroconverted)) +
 geom_ribbon(aes(ymin = abundance - abundance.se,
                 ymax = abundance + abundance.se),
             alpha=0.5) +
 facet_wrap(~variable,
            scale='free_y') +
 xlim(100, 800) + 
-geom_rug(aes(color=p.adjusted < 0.05), sides='b') +
-scale_y_continuous(labels=percent) +
-ggplot.pal.sig +
+geom_rug(aes(color=significance), sides='lb') +
+ylab +
 ggplot.theme +
 ggplot.pal.scale + 
+sig.scale +
+xlab('Subject Age (days)') +
 geom_vline(x=479, color='purple', alpha=0.75) +
 geom_vline(x=479-68, linetype='dashed', color='purple', alpha=0.75) +
 geom_vline(x=479+68, linetype='dashed', color='purple', alpha=0.75) +
-ylab('Relative Abundance') +
 ggtitle(options$rank) +
 theme(strip.text=element_text(face='italic'))
+
+logscale <-
+scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+              labels=trans_format("log10", math_format(10^.x)))
+
+ggplot(combined,
+       aes(x=age_at_sampling,
+           y=exp(-res))) +
+geom_point() +
+facet_wrap(~variable) +
+xlim(100, 600)
 
 dev.off()
