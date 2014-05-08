@@ -1,4 +1,4 @@
-#!/usr/bin/env rscript
+#!/usr/bin/env Rscript
 
 # Plot a density graph of the abundance distribution of --name at rank --rank
 

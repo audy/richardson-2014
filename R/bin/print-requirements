@@ -1,2 +1,2 @@
-#!/usr/bin/env RScript
+#!/usr/bin/env Rscript
 for (i in c('optparse', 'phyloseq', 'ggplot2', 'reshape2', 'plyr')) cat(paste(i, packageVersion(i)), '\n')

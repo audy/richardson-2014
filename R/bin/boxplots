@@ -1,0 +1,69 @@
+#!/usr/bin/env Rscript
+
+library(optparse)
+
+
+option_list <- c(make_option('--input', type='character', default='/dev/stdin'),
+                 make_option('--rank', type='character'),
+                 make_option('--top', type='numeric', default=12),
+                 make_option('--start', type='numeric'),
+                 make_option('--stop', type='numeric'),
+                 make_option('--output', type='character', default='Rplots.pdf')
+                )
+
+
+parser <- OptionParser(option_list = option_list)
+options <- parse_args(parser)
+
+library(phyloseq)
+library(ggplot2)
+library(plyr)
+library(pander)
+
+load(options$input)
+
+subset1 <- subset_samples(dipp, age_at_sampling >= 0)
+subset <- subset_samples(dipp, age_at_sampling <= 500)
+
+glom <- tax_glom(subset, taxrank=options$rank)
+
+top5ph = sort(tapply(taxa_sums(glom), tax_table(glom)[, options$rank], sum), TRUE)[1:options$top]
+
+ex <- parse(text=paste(options$rank, "%in%", "names(top5ph)"))
+top = subset_taxa(glom , eval(ex))
+
+df <- psmelt(top)
+
+# downsample per individual
+# TODO create ddply formula dynamically...
+
+form <- as.formula(paste('~', 'dipp_person', '+',  options$rank))
+downsampled <- ddply(df, form, function(d) {
+  avg <- mean(d$Abundance)
+  d <- d[1,]
+  d$Abundance <- avg
+  return(d)
+})
+
+# statistical tests...
+form <- as.formula(paste('~', options$rank))
+tests <- ddply(downsampled, form, function(d) {
+  c(pvalue=wilcox.test(Abundance ~ seroconverted, data=d, exact=FALSE)$p.value)
+})
+
+tests$p.adjusted <- p.adjust(tests$pvalue, method='BY')
+
+pander(tests)
+
+source('./lib/ggplot_theme.R')
+
+pdf(options$output)
+
+ggplot(downsampled,
+       aes_string(x='seroconverted',
+                  y='Abundance')) +
+geom_boxplot() +
+facet_wrap(as.formula(paste('~', options$rank)), scale='free_y') +
+ggplot.theme
+
+dev.off()

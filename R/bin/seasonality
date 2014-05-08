@@ -1,0 +1,83 @@
+#!/usr/bin/env Rscript
+
+library(optparse)
+
+option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.RData'),
+                 make_option('--output', type='character', default='Rplots.pdf'),
+                 make_option('--rank', type='character', default='Species'),
+                 make_option('--top', type='numeric', default=12)
+                )
+
+parser <- OptionParser(option_list = option_list)
+options <- parse_args(parser)
+
+library(phyloseq)
+library(ggplot2)
+library(plyr)
+library(reshape2)
+library(lubridate)
+
+load(options$input)
+
+glom <- tax_glom(dipp, taxrank=options$rank)
+
+otus <- data.frame(otu_table(glom))
+meta <- data.frame(sample_data(glom))
+
+taxa_names <- make.names(data.frame(tax_table(glom))[,options$rank])
+
+colnames(otus) <- taxa_names
+
+dat <- cbind(otus, meta)
+
+dat$sample_date <- as.Date(dat$sample_date, '%m/%d/%y')
+
+dat$season <- 'Winter'
+dat[month(dat$sample_date) %in% 5:9,]$season <- 'Summer'
+
+top_phy <- sort(tapply(taxa_sums(glom), tax_table(glom)[, options$rank], sum), decreasing=TRUE)[1:options$top]
+form <- parse(text=paste(options$rank, '%in%', 'names(top_phy)'))
+tglom <- subset_taxa(glom, eval(form))
+
+x <- psmelt(tglom)
+
+x$sample_date <- as.Date(x$sample_date, '%m/%d/%y')
+
+ggplot(x,
+       aes(x=month(x$sample_date),
+           y=Abundance,
+           color=Species)) +
+    geom_smooth()
+
+# seasonality of appearance of autoantibodies
+
+uniq <- ddply(meta, ~ dipp_person, function(x) x[1,])
+
+cols <- c('date_GADA',
+          'date_ICA',
+          'date_IAA',
+          'date_IA2A',
+          'date_first_sc',
+          'date_second_sc',
+          'date_third_sc',
+          'date_fourth_sc',
+          'date_T1D',
+          'DOB')
+
+for (c in cols) uniq[,c] <- as.Date(uniq[,c], '%m/%d/%y')
+
+# melt coerces Date to numeric ???
+mdat <- melt(sapply(uniq[,c('date_GADA', 'date_IA2A', 'date_ICA', 'date_IAA', 'date_T1D')], month))
+
+ggplot(mdat[,],
+       aes(x=value,
+           fill=Var2)) +
+geom_bar(position='dodge') +
+xlab('Month') +
+ylab('Count') +
+scale_x_continuous(breaks=1:12)
+
+ggplot(uniq,
+       aes(x=month(uniq$DOB),
+           fill=seroconverted)) +
+geom_bar(position='dodge')

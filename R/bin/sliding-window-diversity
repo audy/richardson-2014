@@ -1,0 +1,51 @@
+#!/usr/bin/env Rscript
+
+library(optparse)
+
+option_list <- c(make_option('--input', type='character', default='dipp-for-richness.RData'),
+                 make_option('--output', type='character', default='Rplots.pdf'),
+                 make_option('--width', type='numeric', default=200),
+                 make_option('--method', type='character', default='Shannon')
+                )
+
+parser <- OptionParser(option_list = option_list)
+options <- parse_args(parser)
+
+library(phyloseq)
+library(ggplot2)
+library(plyr)
+library(reshape2)
+
+source('lib/ggplot_theme.R')
+source('lib/generate_subsets.R')
+source('lib/se.R')
+
+load(options$input)
+
+ss <- subset_samples(dipp, age_at_sampling <= 600)
+
+subsets <- generate_subsets(ss, options$width) 
+
+smoothed <- lapply(subsets, function(s) {
+  df <- data.frame(sample_data(s))
+  richness <- estimate_richness(s)[,'Shannon']
+  df$richness <- richness
+  p <- wilcox.test(richness ~ seroconverted, data=df, exact=F)$p.value
+  avg <- ddply(df, ~ seroconverted, function(x) {
+        c(age=median(x$age_at_sampling),
+          median=median(x$richness),
+          se=se(x$richness))
+  })
+  avg$p.value <- p
+  avg
+})
+
+combined <- do.call(rbind, smoothed)
+
+ggplot(combined,
+       aes(x=age, color=seroconverted)) +
+geom_ribbon(aes(ymax = median + se,
+                ymin = median - se,
+                fill=seroconverted,
+                alpha=0.5)) +
+geom_rug(aes(color=p.value < 0.05))

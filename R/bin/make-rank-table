@@ -1,12 +1,12 @@
-#!/usr/bin/env rscript
+#!/usr/bin/env Rscript
 
 library(optparse)
 
 option_list <- c(make_option('--input', default='/dev/stdin'),
                  make_option('--rank'),
-                 make_option('--output', default='/dev/stdout')
+                 make_option('--output', default='/dev/stdout'),
+                 make_option('--subset_taxa')
                 )
-
 
 parser <- OptionParser(option_list = option_list)
 options <- parse_args(parser)
@@ -15,7 +15,12 @@ library(phyloseq)
 
 load(options$input)
 
+if (!is.null(options$subset_taxa)) {
+  dipp <- subset_taxa(dipp, eval(options$subset_taxa))
+}
+
 glom <- tax_glom(dipp, taxrank = options$rank)
+
 
 otus <- data.frame(otu_table(glom), check.names=F)
 

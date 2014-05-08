@@ -2,13 +2,52 @@
 
 library(plyr)
 library(phyloseq)
+source('lib/se.R')
 
-load('dipp-rarefied-phyloseq.RData')
+load('dipp-rf-uniq.RData')
 
-meta <- data.frame(dipp@sam_data)
+meta <- data.frame(sample_data(dipp))
+taxa <- taxa_names(dipp)
+
+cat('- number of samples:', nrow(meta), '\n')
+cat('- number of OTUs:', length(taxa), '\n')
 
 sorted <- meta[with(meta, order(age_at_sampling)),]
 
 subjects <- ddply(sorted, ~ dipp_person, function(x) x[1,])
 
-summary(subjects)
+cases <- subjects[subjects$seroconverted,]
+controls <- subjects[!subjects$seroconverted,]
+
+t1d <- subjects[subjects$has_T1D,]
+
+cat('- number of cases:', nrow(cases), '\n')
+cat('- number of controls:', nrow(controls), '\n')
+cat('- number of T1D:', nrow(t1d), '\n')
+
+cat('- cases GAD:', nrow(cases[cases$aa_GADA,]), '\n')
+cat('- cases IA2A:', nrow(cases[cases$aa_IA2A,]), '\n')
+cat('- cases ICA:', nrow(cases[cases$aa_IAA,]), '\n')
+cat('- cases IAA:', nrow(cases[cases$aa_ICA,]), '\n')
+
+cat('- cases 1AA', nrow(cases[cases$aa_number == 1,]), '\n')
+cat('- cases 2AA', nrow(cases[cases$aa_number == 2,]), '\n')
+cat('- cases 3AA', nrow(cases[cases$aa_number == 3,]), '\n')
+cat('- cases 4AA', nrow(cases[cases$aa_number == 4,]), '\n')
+
+# loops, how do they work?
+cases$DOB <- as.Date(cases$DOB, '%m/%d/%y')
+cases$date_first_sc <- as.Date(cases$date_first_sc, '%m/%d/%y')
+cases$date_second_sc <- as.Date(cases$date_second_sc, '%m/%d/%y')
+cases$date_third_sc <- as.Date(cases$date_third_sc, '%m/%d/%y')
+cases$date_fourth_sc <- as.Date(cases$date_fourth_sc, '%m/%d/%y')
+
+days_until_first_sc <- cases$date_first_sc - cases$DOB
+days_until_second_sc <- cases$date_second_sc - cases$DOB
+days_until_third_sc <- cases$date_third_sc - cases$DOB
+days_until_fourth_sc <- cases$date_fourth_sc - cases$DOB
+
+cat('- days until 1AA', median(days_until_first_sc, na.rm=T), 'SE =', se(days_until_first_sc), '\n')
+cat('- days until 2AA', median(days_until_second_sc, na.rm=T), 'SE = ', se(days_until_second_sc), '\n')
+cat('- days until 3AA', median(days_until_third_sc, na.rm=T), 'SE = ', se(days_until_third_sc), '\n')
+cat('- days until 4AA', median(days_until_fourth_sc, na.rm=T), 'SE = ', se(days_until_fourth_sc), '\n')

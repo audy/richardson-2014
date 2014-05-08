@@ -1,0 +1,28 @@
+#!/usr/bin/env Rscript
+
+library(optparse)
+
+option_list <- c(make_option('--input', type='character', default='/dev/stdin'),
+                 make_option('--rank', type='character'),
+                 make_option('--output', type='character', default='Rplots.pdf')
+                )
+
+parser <- OptionParser(option_list = option_list)
+options <- parse_args(parser)
+
+library(phyloseq)
+library(ggplot2)
+
+load(options$input)
+
+glom <- tax_glom(dipp, taxrank=options$rank)
+
+dat <- psmelt(glom)
+
+wrap_formula <- as.formula(paste('~', options$rank))
+
+ggplot(dat, aes_string(x='age_at_sampling',
+                       y='Abundance',
+                       color='seroconverted')) +
+geom_smooth() +
+facet_wrap(wrap_formula)

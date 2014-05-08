@@ -2,104 +2,221 @@
 
 library(optparse)
 
-option_list <- c(make_option('--input', type='character', default='/dev/stdin'),
-                 make_option('--rank', type='character'),
-                 make_option('--cuts', type='numeric', default=12),
-                 make_option('--top', type='numeric', default=12),
-                 make_option('--output', type='character', default='Rplots.pdf')
+option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.RData'),
+                 make_option('--output', type='character', default='Rplots.pdf'),
+                 make_option('--width', type='numeric', default=201),
+                 make_option('--top', type='numeric', default=4),
+                 make_option('--rank', default='Species'),
+                 make_option('--fdr', default='BY'),
+                 make_option('--by', default=30),
+                 make_option('--absolute', type='logical', action='store_true', default=FALSE)
                 )
-
 
 parser <- OptionParser(option_list = option_list)
 options <- parse_args(parser)
 
 library(phyloseq)
-library(ggplot2)
 library(plyr)
+library(scales)
 library(reshape2)
+options$absolute = TRUE
 
+source('lib/sliding_window.R')
 source('lib/ggplot_theme.R')
+source('lib/se.R')
 
-FACTORS <- c('seroconverted')
-CUTS <- options$cuts
-TOP <- options$top
-FORMULA <- ~ seroconverted + age_at_sampling
-TAX_RANK <- options$rank
-
-se <- function(x) sd(x)/sqrt(length(x))
-
+cat('Loading', options$input, '\n')
 load(options$input)
 
-ss <- subset_samples(dipp, age_at_sampling <= 600)
+glom <- tax_glom(dipp, taxrank=options$rank)
 
-dipp.glom <- tax_glom(ss, taxrank=TAX_RANK)
+top_phy <- sort(tapply(taxa_sums(glom), tax_table(glom)[, options$rank], sum), decreasing=TRUE)[1:options$top]
+form <- parse(text=paste(options$rank, '%in%', 'names(top_phy)'))
+top <- subset_taxa(glom, eval(form))
 
-meta <- data.frame(sample_data(dipp.glom))
+first <- min(sample_data(glom)$age_at_sampling)
+last <- max(sample_data(glom)$age_at_sampling)
 
-if( taxa_are_rows(dipp.glom) ) {
-  otus <- data.frame(t(otu_table(dipp.glom)), check.names=F)
-} else {
-  otus <- data.frame(otu_table(dipp.glom), check.names=F)
-}
-taxa <- data.frame(tax_table(dipp.glom))
+start_times <- first:last
+start_times <- start_times[seq(1, length(start_times), options$by)]
 
-meta$group <- cut(meta$age_at_sampling,
-                  breaks=CUTS,
-                  labels=1:CUTS)
+phy <- top
 
-vars <- all.vars(FORMULA)
+subsets <- generate_subsets(phy, start_times, options$width)
 
-for (var in c(vars, 'dipp_person', 'group')) otus[,var] <- meta[,var]
+vars <- c('Gender',
+          'vaginal_delivery',
+          'breast_feeding')
 
-mdat <- melt(otus, c(vars, 'dipp_person', 'group'))
+sliding.avg <- lapply(subsets, function(s) {
+  cat("I'm goin'\n")
+  # get otus and metadata
+  otus <- data.frame(otu_table(s), check.names=F)
+  meta <- data.frame(sample_data(s))
 
-averaged <- ddply(mdat, ~group+dipp_person+variable, function(x) {
-  c(seroconverted=x$seroconverted[1],
-    age_at_sampling=mean(x$age_at_sampling),
-    varable=x$variable[1],
-    value=mean(x$value),
-    group=x$group[1])
+  # get names of taxa
+  names <- data.frame(tax_table(s)[taxa_names(s)])[,options$rank]
+  colnames(otus) <- names
+
+  # add relevant vars to otu data frame
+  otus$seroconverted <- meta$seroconverted
+  otus$age_at_sampling <- meta$age_at_sampling
+  otus$dipp_person <- meta$dipp_person
+
+  for (v in vars) otus[,v] <- meta[,v]
+
+  # melt metadata
+  mdat <- melt(otus, c('seroconverted', 'age_at_sampling', 'dipp_person', vars))
+
+  # downsample by person by taking the median
+  downsampled <- ddply(mdat, variable~seroconverted+dipp_person, function(x) {
+       c(age_at_sampling=median(x$age_at_sampling),
+         median=median(x$value),
+         Gender=x[1,]$Gender,
+         vaginal_delivery=x[1,]$vaginal_delivery,
+         breast_feeding=x[1,]$breast_feeding)
+  })
+
+  pvals <- ddply(downsampled, ~variable, function(x) {
+      m1 <- glm(median ~ Gender + vaginal_delivery + breast_feeding, data=x)
+      m2 <- glm(seroconverted ~ residuals(m1), data=x)
+      res <- median(residuals(m2, type="deviance"))
+      prob <- predict(m2 ,type=c("response"))
+      roc_auc <- tryCatch({ roc(seroconverted ~ prob, data = x)$auc },
+               error = function(e) { NA })
+      c(p.value=anova(m2, test='Chisq')[[5]][[2]], res=res,auc=roc_auc)
+  })
+
+  # TODO correct for multiple hypothesis testing
+
+  averaged <- ddply(downsampled, ~variable+seroconverted, function(x) {
+     c(abundance=median(x$median),
+       abundance.se=se(x$median),
+       age_at_sampling=median(x$age_at_sampling))
+  })
+
+  # get median, confidence intervals and add pvalue in one table
+  merged <- merge(averaged, pvals, by.x='variable', by.y='variable', all=T)
+
+  merged$width <- max(otus$age_at_sampling) - min(otus$age_at_sampling)
+  merged$n <- nrow(otus)
+  merged$p.adjusted <- p.adjust(merged$p.value, options$fdr)
+  merged$n.cases <- nrow(otus[otus$seroconverted,])
+  merged$n.controls <- nrow(otus[!otus$seroconverted,])
+  merged 
 })
 
+combined <- do.call('rbind', sliding.avg)
+combined <- combined[complete.cases(combined),]
 
-smoothed <- ddply(averaged, ~ seroconverted + group + variable, function(x) {
-  c(age_at_sampling=mean(x$age_at_sampling), mean=mean(x$value), se=se(x$value))
-})
+limits <- aes(ymin = median - err, ymax = median + err)
 
-pvalues <- ddply(averaged, ~ group + variable, function(x) {
-  c(pvalue=wilcox.test(value ~ seroconverted, data=x, exact=FALSE)$p.value)
-})
+combined$status <- factor(combined$seroconverted)
 
-smoothed <- merge(smoothed, pvalues)
-
-smoothed$name <- taxa[smoothed$variable,][,TAX_RANK]
-
-avg <- ddply(mdat, ~variable, function(x) c(mean=mean(x$value)))
-
-keep <- avg[with(avg, order(-mean)),][1:TOP,]$variable
-
-smoothed.keep <- smoothed[smoothed$variable %in% keep,]
-
-ggplot.pal.scale <- scale_fill_manual(values=c("#FFAB00", # cases
-                                             "#999999"), # controls
-                                          name='Status'
-                                        )
-
+min(combined$p.adjusted)
 
 pdf(options$output)
 
-means <- ddply(smoothed.keep, ~name, function(x) c(mean=mean(x$mean)))
+ggplot(combined,
+       aes(x=p.adjusted,
+           color=variable)) +
+geom_density() +
+geom_vline(x=0.05)
 
-smoothed.keep$age_at_sampling <- as.integer(as.character(smoothed.keep$age_at_sampling))
+ggplot(combined,
+       aes(x=age_at_sampling,
+           y=n)) +
+geom_line()
 
-ggplot(smoothed.keep,
-       aes(x=age_at_sampling, y=mean, fill=factor(seroconverted, levels=c(1, 0), labels=c('Case', 'Control')))) +
-facet_wrap(~name, scale='free_y') +
-geom_ribbon(aes(ymin=mean - se, ymax=mean + se), width=0, alpha=0.5) +
-xlab('Age at Sampling (days)') +
-ylab('Relative Abundance') +
-ggplot.pal.scale +
+ggplot(combined[combined$age_at_sampling < 600 & combined$age_at_sampling > 100,],
+       aes(x=seroconverted,
+           y=auc,
+           color=variable)) +
+geom_boxplot()
+
+ggplot(combined,
+       aes(x=w)) +
+geom_boxplot() +
+ggtitle(paste(median(combined$w), se(combined$w)))
+
+#
+# Set colors for significance levels
+#
+
+sig.colours <- c(insignificant="#FFFFFF")
+if (min(combined$p.adjusted) < 0.05) sig.colours <- c(sig.colours, '0.05'="#218457")
+if (min(combined$p.adjusted) < 0.01) sig.colours <- c(sig.colours, '0.01'="#FF0000") # throw a party
+if (min(combined$p.adjusted) < 0.001) sig.colours <- c(sig.colours, '0.001'="#00FF00") # throw a party
+
+sig.scale <- scale_colour_manual(values=sig.colours)
+
+combined$significance <- 'insignificant'
+combined[combined$p.adjusted < 0.05,]$significance <- '0.05'
+combined[combined$p.adjusted < 0.01,]$significance <- '0.01'
+combined[combined$p.adjusted < 0.001,]$significance <- '0.001'
+combined$significance <- as.factor(combined$significance)
+
+
+if (options$absolute) {
+  yscale <- scale_y_continuous(labels=scientific)
+  ylab <- ylab('Predicted Copy Number')
+} else {
+  yscale <- scale_y_continuous(labels=percent)
+  ylab <- ylab('Relative Abundance')
+}
+
+##
+# AUC PLOT
+#
+ggplot(combined[combined$variable == 'dorei-vulgatus',],
+       aes(x=age_at_sampling,
+           y=auc)) +
+geom_line(color='gray') +
+geom_point() +
+xlim(100, 600) +
+geom_rug(aes(color=significance), sides='bl') +
+facet_wrap(~variable) +
+sig.scale +
+geom_hline(y=0.7, linetype='dashed') + 
+geom_vline(x=479, color='purple', alpha=0.75) +
+geom_vline(x=479-68, linetype='dashed', color='purple', alpha=0.75) +
+geom_vline(x=479+68, linetype='dashed', color='purple', alpha=0.75) +
 ggplot.theme +
-geom_rug(aes(x=age_at_sampling, color=pvalue < 0.05), sides='b')
+ylab('AUC') +
+xlab('Subject Age (days)')
+
+
+ggplot(combined,
+       aes(x=age_at_sampling,
+           y=abundance,
+           fill=seroconverted)) +
+geom_ribbon(aes(ymin = abundance - abundance.se,
+                ymax = abundance + abundance.se),
+            alpha=0.5) +
+facet_wrap(~variable,
+           scale='free_y') +
+xlim(100, 800) + 
+geom_rug(aes(color=significance), sides='lb') +
+ylab +
+ggplot.theme +
+ggplot.pal.scale + 
+sig.scale +
+xlab('Subject Age (days)') +
+geom_vline(x=479, color='purple', alpha=0.75) +
+geom_vline(x=479-68, linetype='dashed', color='purple', alpha=0.75) +
+geom_vline(x=479+68, linetype='dashed', color='purple', alpha=0.75) +
+ggtitle(options$rank) +
+theme(strip.text=element_text(face='italic'))
+
+logscale <-
+scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+              labels=trans_format("log10", math_format(10^.x)))
+
+ggplot(combined,
+       aes(x=age_at_sampling,
+           y=exp(-res))) +
+geom_point() +
+facet_wrap(~variable) +
+xlim(100, 600)
 
 dev.off()

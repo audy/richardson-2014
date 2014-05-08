@@ -1,3 +1,5 @@
+#!/usr/bin/env rscript
+
 # lifted from: http://joey711.github.io/waste-not-supplemental/simulation-cluster-accuracy/simulation-cluster-accuracy-server.html
 edgeRnorm = function(physeq, ...) {
     require("edgeR")
@@ -38,5 +40,5 @@ edgeRnorm = function(physeq, ...) {
     # in-place replacement of the OTU table
     otu_table(physeq) <- otu_table(counts, taxa_are_rows=FALSE)
 
-    return(dipp)
+    return(physeq)
 }

@@ -1,0 +1,27 @@
+#!/usr/bin/env Rscript
+
+library(optparse)
+
+option_list <- c(make_option('--directory', help='directory containing CSV files to merge'),
+                 make_option('--output', default='/dev/stdout')
+                )
+
+parser <- OptionParser(option_list = option_list)
+options <- parse_args(parser)
+
+log <- function(...) write(paste(...), stderr())
+
+files <- sapply(list.files(options$directory), function(x) paste(options$directory, x, sep='/'))
+
+log('found', length(files), 'files')
+
+data <- sapply(files, function(x) {
+  log('loading', x)
+  read.csv(x, header=T, row.names=1)
+})
+
+log('combining')
+combined <- do.call(cbind, data)
+
+log('writing to', options$output)
+write.csv(combined, options$output)

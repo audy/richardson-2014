@@ -1,3 +1,6 @@
 [submodule "data"]
 	path = data
 	url = git@github.org:audy/richardson-2014-data.git
+[submodule "python/run-picrust/picrust"]
+	path = python/run-picrust/picrust
+	url = https://github.com/picrust/picrust.git

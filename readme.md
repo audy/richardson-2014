@@ -4,6 +4,10 @@ After cloning this repo, download the data:
 
 `git submodule update --init --recursive`
 
+(after installing necessary libraries and what-not)
+
+`make`
+
 ## License
 
 The MIT License (MIT)

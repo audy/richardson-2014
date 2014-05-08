@@ -1,3 +1,4 @@
+#!/usr/bin/env rscript
 plot_timeseries <- function(g, x=NULL, y=NULL, color=NULL) {
     mdf <- psmelt(g)
 

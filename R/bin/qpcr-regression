@@ -1,0 +1,58 @@
+#!/usr/bin/env Rscript
+
+library(optparse)
+
+option_list <- c(make_option('--rdata', default='dipp-rf-uniq.RData'),
+                 make_option('--qpcr-data', default='../data/bacteroides-qPCR-25.Nov.2013.csv'),
+                 make_option('--target', default='Bacteroides'),
+                 make_option('--rank', default='Genus'),
+                 make_option('--output', default='predicted-qpcr.csv')
+                 )
+
+
+parser <- OptionParser(option_list = option_list)
+options <- parse_args(parser)
+
+library(phyloseq)
+
+#
+# Load OTU Abundance Data
+#
+load(options$rdata)
+
+ss <- subset_taxa(dipp, Genus == "Bacteroides")
+glom <- tax_glom(ss, taxrank=options$rank)
+
+otus <- data.frame(otu_table(glom), check.names=F)
+meta <- data.frame(sample_data(glom))
+
+otus$sample_id <- meta$sample_id
+
+oldname <- colnames(otus)[1]
+colnames(otus)[1] <- 'relative_abundance'
+
+
+#
+# Load qPCR Data
+#
+
+qpcr <- read.csv(options$`qpcr-data`)
+
+#
+# Regression
+#
+
+dat <- merge(otus, qpcr, by.x='sample_id', by.y='sample')
+
+dat$copies <- as.numeric(as.character(dat$copies))
+dat <- dat[complete.cases(dat),]
+
+mod <- glm(as.numeric(as.character(copies)) ~ relative_abundance, data=dat)
+
+otus$predicted_copies <- predict(mod, newdata=otus)
+
+new_table <- data.frame(otus[,1])
+rownames(new_table) <- rownames(otus)
+colnames(new_table)[1] <- oldname
+
+write.csv(new_table, file=options$output)

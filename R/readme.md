@@ -10,6 +10,7 @@ requirements:
 - ggplot2 v0.9.3.1
 - reshape2 v1.2.2
 - plyr v1.8.1
+- perm v1.0.0.0
 
 ## Instructions
 

@@ -8,14 +8,16 @@
 
 library(optparse)
 
+first <- function(x) x[1,]
+
 option_list <- c(make_option('--output', type='character', default='/dev/stdout'),
                  make_option('--unique', type='logical', default=FALSE, action='store_true'),
-                 make_option('--depth', type='numeric'),
+                 make_option('--depth', type='numeric', default=10000),
                  make_option('--proportion', type='logical', action='store_true', default=FALSE),
                  make_option('--otutable', type='character'),
                  make_option('--metadata', type='character'),
                  make_option('--taxonomies', type='character'),
-                 make_option('--normalize', type='character'),
+                 make_option('--normalize', type='character', default='none'),
                  make_option('--tree', type='character'))
 
 parser <- OptionParser(option_list = option_list)
@@ -25,17 +27,31 @@ options <- parse_args(parser)
 suppressMessages(suppressWarnings(source('./lib/load_dipp.R')))
 suppressMessages(suppressWarnings(source('./lib/normalize.R')))
 
+br <- function() cat("\n")
+
 dipp <- load.dipp(otu.table=options$otutable,
                   sam.data=options$metadata,
                   tax.table=options$taxonomies,
                   tree=options$tree)
 
+cat("Loaded all samples\n")
+dipp
+br()
+
+# remove single autoantibody cases
+dipp <- subset_samples(dipp, aa_number != 1)
+cat("Removed single autoantibody cases\n")
+dipp
+br()
+
+
 cat("Before uniquification\n")
 dipp
+br()
 
 if (options$unique == TRUE) {
   library(plyr)
-  meta <- data.frame(sam_data(dipp), check.names=F)
+  meta <- data.frame(sample_data(dipp), check.names=F)
 
   # ddply drops rownames.
   meta$illumina_id <- rownames(meta)
@@ -51,26 +67,37 @@ if (options$unique == TRUE) {
 
   # put back rownames.
   rownames(uniqued) <- uniqued$illumina_id
-  dipp <- phyloseq(sam_data(uniqued), otu_table(dipp), tax_table(dipp))
+  dipp <- phyloseq(sample_data(uniqued), otu_table(dipp), tax_table(dipp))
 }
 
-cat("Before rarefaction\n")
+cat("After uniquifying by dipp_person\n")
 dipp
+br()
 
 if (options$normalize == 'rarefaction') {
   cat('rarefying\n')
-  dipp <- rarefy_even_depth(dipp, options$depth)
 } else if (options$normalize == 'edger') {
   cat('applying edgeR normalization\n')
   dipp <- edgeRnorm(dipp)
+} else {
+  dipp <- dipp
 }
+
+cat("After normalization\n")
+dipp
+br()
 
 if (options$proportion == TRUE) {
   cat('applying proportion\n')
   dipp <- transform_sample_counts(dipp, function(x) x/sum(x))
 }
 
-cat("After normalization\n")
+cat("Final object\n")
 dipp
+br()
 
+# enforce orientation of OTU table
+if (taxa_are_rows(dipp)) dipp <- t(dipp)
+
+cat(paste("Saving to", options$output, "\n"))
 save(dipp, file=options$output)
