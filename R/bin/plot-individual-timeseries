@@ -27,6 +27,7 @@ otus <- data.frame(otu_table(glom))
 
 meta$dorei <- otus[,1]
 
+
 ggplot(meta,
        aes(x=age_at_sampling,
            y=dorei,
@@ -38,3 +39,45 @@ coord_cartesian(ylim=c(0, 1), xlim=c(100,600)) +
 opts(strip.background = theme_blank(),
      strip.text.x = theme_blank()) +
 ggplot.theme
+
+
+meta$bf <- meta$age_at_sampling - (meta$breast_feeding_duration*30)
+
+ftp <- ddply(meta, ~dipp_person, function(x) x[with(x, order(age_at_sampling))[1],])
+
+
+ggplot(ftp,
+       aes(x=breast_feeding_duration,
+           color=dorei > 0.3)) +
+geom_density()
+
+ggplot(ftp,
+       aes(x=breast_feeding_duration,
+           y=dorei)) +
+geom_point() +
+ggtitle(cor(ftp$breast_feeding_duration, ftp$dorei, use='complete.obs'))
+
+m <- lm(breast_feeding_duration ~ dorei, data=ftp)
+
+anova(m, test='Chisq')
+
+max_dorei <- ddply(meta, ~dipp_person, function(x) x[with(x, order(-dorei))[1],])
+
+ggplot(max_dorei,
+       aes(x=dorei,
+           color=seroconverted)) +
+geom_density()
+
+ggplot(max_dorei,
+       aes(x=breast_feeding_duration,
+           y=dorei)) +
+geom_point()
+
+
+avg_dorei <- ddply(meta, ~dipp_person, function(x) { x[1,]$dorei <- median(x$dorei); x })
+avg_dorei <- ddply(avg_dorei, ~dipp_person, function(x) x[with(x, order(age_at_sampling))[1],])
+
+ggplot(avg_dorei,
+       aes(x=breast_feeding_duration,
+           y=dorei)) +
+geom_point()
