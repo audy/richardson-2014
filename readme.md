@@ -4,9 +4,16 @@ After cloning this repo, download the data:
 
 `git submodule update --init --recursive`
 
-(after installing necessary libraries and what-not)
+Install R and [Packrat](http://rstudio.github.io/packrat/).
 
-`make`
+Start R in the R directory. Packrat should start installing dependencies
+automatically.
+```
+cd R/
+R # you should see packrat start to install dependencies
+```
+After that (hopefully) finishes, exit R and type `make`. Get some coffee. There
+should be some figures when you come back.
 
 ## Instructions for generating figures
 
