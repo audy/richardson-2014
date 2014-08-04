@@ -19,6 +19,7 @@ option_list <- c(make_option('--output', type='character', default='/dev/stdout'
                  make_option('--taxonomies', type='character'),
                  make_option('--normalize', type='character', default='none'),
                  make_option('--tree', type='character'),
+                 make_option('--keep_singles', type='logical', action='store_true', default=FALSE, help='keep single AA subjects (default=FALSE)'),
                  make_option('--subset', type='character', help='subset expression', default='none'),
                  make_option('--shuffle', default=FALSE, action='store_true', help='randomize case/control assignments'),
                  make_option('--glom', default='none'))
@@ -38,6 +39,11 @@ dipp <- load.dipp(otu.table=options$otutable,
                   tax.table=options$taxonomies,
                   tree=options$tree)
 
+cat("Selecting from site\n")
+dipp <- subset_samples(dipp, site %in% c('Turku'))
+
+dipp
+
 if (options$shuffle) {
   cat("Shuffling cases/controls\n")
   df <- data.frame(sample_data(dipp))
@@ -49,11 +55,13 @@ cat("Loaded all samples\n")
 dipp
 br()
 
-# remove single autoantibody cases
-dipp <- subset_samples(dipp, aa_number != 1)
-cat("Removed single autoantibody cases\n")
-dipp
-br()
+if (!options$keep_singles) {
+  # remove single autoantibody cases
+  dipp <- subset_samples(dipp, aa_number != 1)
+  cat("Removed single autoantibody cases\n")
+  dipp
+  br()
+}
 
 
 cat("Before uniquification\n")
