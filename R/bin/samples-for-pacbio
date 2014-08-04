@@ -1,0 +1,24 @@
+#!/usr/bin/env Rscript
+
+library(phyloseq)
+library(magrittr)
+library(dplyr)
+
+load('dipp-rf-uniq.RData')
+
+glom <- dipp %>%
+  subset_taxa(Species == 'dorei-vulgatus') %>%
+  tax_glom(taxrank = 'Species')
+
+otus <- data.frame(otu_table(glom))
+colnames(otus) <- 'Abundance'
+meta <- data.frame(sample_data(glom))
+dat <- cbind(otus, meta)
+
+samples <- dat %>%
+  subset(age_at_sampling > 250 & age_at_sampling < 300) %>%
+  group_by(dipp_person) %>%
+  arrange(-Abundance) %>%
+  data.frame()
+
+write.csv(samples, file='samples-for-pacbio.csv')
