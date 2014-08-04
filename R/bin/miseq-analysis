@@ -3,52 +3,55 @@
 # generate Rdata file for miseq data...
 
 library(ggplot2)
+library(phyloseq)
+library(magrittr)
+library(reshape2)
 
 species <- 'dorei-vulgatus'
 
-library(phyloseq)
-
 load('dipp-rf-uniq.RData')
-
 dipp.hiseq <- dipp
 
 load('dipp-miseq.RData')
-
 dipp.miseq <- dipp
 
-get_species <- function(phy, species) {
-  phy.ss <- subset_taxa(phy, Species == species)
-  phy.glom<- tax_glom(phy.ss, taxrank = 'Species')
-  return(data.frame(otu_table(phy.glom)))
+# psmelt for one species
+mymelt <- function(phy) {
+    meta <- data.frame(sample_data(phy))
+    otus <- data.frame(otu_table(phy))
+    meta$Abundance <- otus[,1]
+    return(meta)
 }
 
-get_common_species <- function(phy1, phy2, species) {
-  phy1.otus <- get_species(phy1, species)
-  phy2.otus <- get_species(phy2, species)
-  common <- intersect(rownames(phy1.otus), rownames(phy2.otus))
-  phy1.common <- phy1.otus[common,]
-  phy2.common <- phy2.otus[common,]
-  return(data.frame(cbind(phy1.common, phy2.common)))
-}
+miseq <-
+    dipp.miseq %>%
+      subset_taxa(Species == species) %>%
+      tax_glom(taxrank = 'Species') %>%
+      mymelt()
 
-common <- get_common_species(dipp.hiseq, dipp.miseq, species)
+hiseq <-
+    dipp.hiseq %>%
+      subset_taxa(Species == species) %>%
+      tax_glom(taxrank = 'Species') %>%
+      mymelt()
 
-plot(common[,1], common[,2])
 
-m1 <- lm(phy1.common ~ phy2.common, data=common)
+cat("There are", length(common), "samples in common\n")
 
-summary(m1)
+rownames(miseq) <- miseq$sample_id
+rownames(hiseq) <- hiseq$sample_id
 
-r2 <- sprintf('%.2f', summary(m1)$r.squared)
+common <- intersect(rownames(miseq), rownames(hiseq))
 
-anova(m1, test='Chisq')
+miseq <- miseq[common,]
+hiseq <- hiseq[common,]
 
-ggplot(common,
-       aes(x=phy1.common,
-           y=phy2.common)) +
-geom_point() +
-xlab('HiSeq 2000') +
-ylab('MiSeq') +
-ggtitle(paste('B. dorei-vulgatus relative abundance, R^2=', r2)) +
-geom_smooth(method='lm', se=F) +
-ggplot.theme
+plot(miseq$Abundance,
+     hiseq$Abundance)
+
+df <- data.frame(miseq=miseq$Abundance,hiseq=hiseq$Abundance)
+df <- melt(df)
+
+mod <- lm(value ~ variable, data=df)
+
+plot(predict(mod))
