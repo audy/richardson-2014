@@ -80,7 +80,18 @@ dipp-rf-uniq.RData:
 		--proportion \
 		--otutable $(OTUTABLE) \
 		--metadata $(METADATA) \
-		--taxonomies $(TAXONOMIES)
+		--taxonomies $(TAXONOMIES) \
+		--proportion
+
+dipp-miseq.RData:
+	bin/write-rdata \
+	    --unique \
+	    --output $@ \
+	    --normalize $(NORMALIZE) \
+	    --otutable $(MISEQOTUS) \
+	    --metadata $(METADATA) \
+	    --taxonomies $(FULLTAXONOMIES) \
+	    --proportion
 
 dipp-for-richness.RData:
 	bin/write-rdata \
