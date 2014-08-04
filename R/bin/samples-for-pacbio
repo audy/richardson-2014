@@ -3,8 +3,33 @@
 library(phyloseq)
 library(magrittr)
 library(dplyr)
+library(ggplot2)
 
 load('dipp-rf-uniq.RData')
+
+WINDOW_START <- 235
+WINDOW_STOP <- 329
+
+# remove any that weren't accepted by ICBR
+# "rejected by ICBR". Anything not in this list
+# has still not been checked by ICBR.
+
+rejected_by_icbr <- read.csv('../data/rejected-by-icbr.txt', header=F)[,1]
+
+# these samples had low DNA concentration, volume or
+# were too sheared.
+
+bad.dna<- c(64, 635, 177, 222, 293,
+          71, 94, 167, 204, 272, 281,
+          214, 282, 294,
+          297, 360, 365, 411, 465,
+          498, 483, 499, 501, 737,
+          519, 529, 634, 686, 735,
+          741, 772, 821, 830)
+
+SKIP <- c(rejected_by_icbr,
+          bad.dna)
+
 
 glom <- dipp %>%
   subset_taxa(Species == 'dorei-vulgatus') %>%
@@ -16,9 +41,43 @@ meta <- data.frame(sample_data(glom))
 dat <- cbind(otus, meta)
 
 samples <- dat %>%
-  subset(age_at_sampling > 250 & age_at_sampling < 300) %>%
+  subset(age_at_sampling > WINDOW_START & age_at_sampling < WINDOW_STOP) %>%
   group_by(dipp_person) %>%
   arrange(-Abundance) %>%
+  filter(!sample_id %in% SKIP) %>%
+  filter(row_number() == 1) %T>%
+  nrow %>%
   data.frame()
 
-write.csv(samples, file='samples-for-pacbio.csv')
+
+cases <- subset(samples, seroconverted)
+controls <- subset(samples, !seroconverted)
+
+ssize <- min(nrow(cases), nrow(controls))
+top.cases <- head(cases, ssize)
+top.controls <- head(controls, ssize)
+
+all <- rbind(top.cases, top.controls)
+
+if(!all$dipp_person %>%
+ unique() %>%
+ length() == nrow(all)) {
+  cat("WARNING: more than one sample per subject!\n")
+} else {
+  cat("1 sample per subject. All Good!\n")
+}
+
+cat('I have', nrow(all), 'samples\n')
+
+if (sum(all$seroconverted) != sum(!all$seroconverted)) {
+  cat("Warning: n_cases != n_controls!\n")
+}
+
+columns <- c('sample_id', 'Abundance', 'sample_date',
+             'age_at_sampling', 'seroconverted', 'total_reads')
+
+pulled <- read.csv('../data/pulled-for-pacbio.txt', header=F)
+to.check <- all[!all$sample_id %in% pulled[,1],]
+
+write.csv(to.check[,columns], file='samples-for-pacbio.csv')
+
