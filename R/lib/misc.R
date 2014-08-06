@@ -6,9 +6,6 @@ lowest_rank <- function(phy) {
 
 top_n_taxa <- function(phy, n) {
   rank <- lowest_rank(phy)
-  top_phy <- sort(tapply(taxa_sums(phy), tax_table(phy)[,rank], sum),
-                  decreasing=TRUE)[1:n]
-  form <- parse(text=paste(rank, '%in%', 'names(top_phy)'))
-  cat("top", n, rank, ":", names(top_phy), "\n")
-  subset_taxa(phy, eval(form))
+  keep <- names(sort(taxa_sums(phy), T))[1:n]
+  prune_taxa(keep, phy)
 }
