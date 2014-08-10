@@ -1,18 +1,31 @@
 #!/usr/bin/env Rscript
 
-# generate Rdata file for miseq data...
+library(optparse)
+
+option_list <- c(make_option('--input-hiseq', type='character', default='dipp-rf-uniq.RData'),
+                 make_option('--input-miseq', type='character',
+                             default='dipp-miseq.RData'),
+                 make_option('--species', type='character'),
+                 make_option('--predicted-out', default='/dev/null'),
+                 make_option('--pdf', default='Rplots.pdf'))
+
+
+parser <- OptionParser(option_list = option_list)
+options <- parse_args(parser)
 
 library(ggplot2)
 library(phyloseq)
 library(magrittr)
 library(reshape2)
 
-species <- 'dorei-vulgatus'
+pdf(options$pdf)
 
-load('dipp-rf-uniq.RData')
+species <- options$species
+
+load(options$`input-hiseq`)
 dipp.hiseq <- dipp
 
-load('dipp-miseq.RData')
+load(options$`input-miseq`)
 dipp.miseq <- dipp
 
 # psmelt for one species
@@ -22,6 +35,7 @@ mymelt <- function(phy) {
     meta$Abundance <- otus[,1]
     return(meta)
 }
+
 
 miseq <-
     dipp.miseq %>%
@@ -35,23 +49,54 @@ hiseq <-
       tax_glom(taxrank = 'Species') %>%
       mymelt()
 
-
-cat("There are", length(common), "samples in common\n")
-
 rownames(miseq) <- miseq$sample_id
 rownames(hiseq) <- hiseq$sample_id
 
 common <- intersect(rownames(miseq), rownames(hiseq))
 
-miseq <- miseq[common,]
-hiseq <- hiseq[common,]
+cat("There are", length(common), "samples in common\n")
 
-plot(miseq$Abundance,
-     hiseq$Abundance)
+cmiseq <- miseq[common,]
+chiseq <- hiseq[common,]
 
-df <- data.frame(miseq=miseq$Abundance,hiseq=hiseq$Abundance)
-df <- melt(df)
+df <- data.frame(miseq=cmiseq$Abundance,
+                 hiseq=chiseq$Abundance)
 
-mod <- lm(value ~ variable, data=df)
+# linear regression
+df <- data.frame(miseq=cmiseq$Abundance, chiseq=hiseq$Abundance)
+mod <- lm(miseq ~ hiseq, data=df)
+r2 <- sprintf('%.2f', summary(mod)$r.squared)
 
-plot(predict(mod))
+summary(mod, test='anova')
+
+ggplot(df,
+       aes(x=miseq,
+           y=hiseq)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(method='lm') +
+  ggtitle(bquote(R^2 ~ ' = ' ~ .(r2)))
+
+# predict B. dorei abundance in the remaining hiseq samples
+all <- data.frame(hiseq=hiseq$Abundance)
+all$predicted <- predict(mod, newdata=all)
+
+ggplot(all,
+       aes(x=hiseq,
+           y=predicted)) +
+geom_point() +
+xlab('HiSeq Abundance') +
+ylab('Predicted Abundance') +
+theme_bw()
+
+# write predicted abundance to a CSV file
+tt <- data.frame(tax_table(dipp.hiseq))
+cname <- as.character(head(subset(tt, Species == options$species), 1)$OTU)
+
+df2 <- data.frame(all$predicted)
+
+colnames(df2) <- cname
+
+write.csv(df2, file=options$`predicted-out`)
+
+dev.off()
