@@ -1,18 +1,41 @@
 # vim: set noexpandtab
 
+# run `make` to build graphs/analyses
+
+##
+# INPUT FILE LOCATIONS
+#
+
+# miseq data
+MISEQOTUS?=''
+MISEQMETA?=''
+
+# hiseq data
 OTUTABLE?='../data/dipp-otus_filtered.csv'
 METADATA?='../data/dipp-sample_data.csv'
+METAGENOME?='../data/dipp-predicted_metagenome.csv'
+
+# hiseq/miseq data
 TAXONOMIES?='../data/dipp-tax_table-merged_bacteroides.csv'
 TREE?='../data/97-otus.tree'
-METAGENOME?='../data/dipp-predicted_metagenome.csv'
+
 METAGENOME_TAX?='../data/dipp-kegg_orthologies.csv'
+
+# misc.
 QPCR='../data/dorei-vulgatus-predicted-copies.csv'
 PHYLOSEQ='dipp-rf-uniq.RData'
-NORMALIZE?='edger'
-FDR?='BH'
-WIDTH?=201
-TOP?=4
-BY?=10
+
+##
+# MISC PARAMETERS
+#
+
+NORMALIZE?='edger' # method for correcting for differences in sequencing depth
+
+FDR?='BH' # fdr correction method in glm script
+TOP?=4 # top n taxa to plot
+
+BY?=10 # distance between sliding windows in days
+WIDTH?=201 # width of sliding window in days
 
 TESTMETHOD?='glm'
 
@@ -90,7 +113,7 @@ dipp-miseq.RData:
 	    --normalize $(NORMALIZE) \
 	    --otutable $(MISEQOTUS) \
 	    --metadata $(METADATA) \
-	    --taxonomies $(FULLTAXONOMIES) \
+	    --taxonomies $(TAXONOMIES) \
 	    --proportion
 
 dipp-for-richness.RData:
