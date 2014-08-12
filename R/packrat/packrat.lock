@@ -17,13 +17,13 @@ Package: annotate
 Source: Bioconductor
 Version: 1.42.1
 Hash: 7c8ab3c0f5d7d26c16e1c59cc2b8281a
-Requires: BiocGenerics, DBI, XML, xtable, Biobase, AnnotationDbi
+Requires: AnnotationDbi, Biobase, BiocGenerics, DBI, XML, xtable
 
 Package: AnnotationDbi
 Source: Bioconductor
 Version: 1.26.0
 Hash: b6a2da11accc6a534765f3844ce28ba6
-Requires: BiocGenerics, DBI, GenomeInfoDb, Biobase, IRanges, RSQLite
+Requires: Biobase, BiocGenerics, DBI, GenomeInfoDb, IRanges, RSQLite
 
 Package: ape
 Source: CRAN
@@ -56,13 +56,13 @@ Package: biom
 Source: CRAN
 Version: 0.3.12
 Hash: d5481d523fd8bc2a0fac5592cdd44272
-Requires: RJSONIO, Matrix, plyr
+Requires: Matrix, plyr, RJSONIO
 
 Package: Biostrings
 Source: Bioconductor
 Version: 2.32.1
 Hash: 171e86bb3653c7f5e7fc15bad8302eef
-Requires: BiocGenerics, zlibbioc, IRanges, XVector
+Requires: BiocGenerics, IRanges, XVector, zlibbioc
 
 Package: boot
 Source: CRAN
@@ -99,8 +99,8 @@ Package: DESeq2
 Source: Bioconductor
 Version: 1.4.5
 Hash: de387b54b287ae8ccdd4ae999282452e
-Requires: BiocGenerics, lattice, RColorBrewer, Rcpp, IRanges, locfit,
-    RcppArmadillo, GenomicRanges, genefilter, geneplotter
+Requires: BiocGenerics, genefilter, geneplotter, GenomicRanges,
+    IRanges, lattice, locfit, RColorBrewer, Rcpp, RcppArmadillo
 
 Package: dichromat
 Source: CRAN
@@ -134,14 +134,14 @@ Package: genefilter
 Source: Bioconductor
 Version: 1.46.1
 Hash: 12452d798d435f14760c22383a344bcf
-Requires: survival, Biobase, AnnotationDbi, annotate
+Requires: annotate, AnnotationDbi, Biobase, survival
 
 Package: geneplotter
 Source: Bioconductor
 Version: 1.42.0
 Hash: 841561ebcc589344005c15730f017b28
-Requires: BiocGenerics, lattice, RColorBrewer, Biobase, AnnotationDbi,
-    annotate
+Requires: annotate, AnnotationDbi, Biobase, BiocGenerics, lattice,
+    RColorBrewer
 
 Package: GenomeInfoDb
 Source: Bioconductor
@@ -163,7 +163,7 @@ Package: ggplot2
 Source: CRAN
 Version: 1.0.0
 Hash: c8bff66238347472f08b6a35608539ff
-Requires: digest, gtable, MASS, proto, plyr, reshape2, scales
+Requires: digest, gtable, MASS, plyr, proto, reshape2, scales
 
 Package: gtable
 Source: CRAN
@@ -238,7 +238,7 @@ Package: multtest
 Source: Bioconductor
 Version: 2.20.0
 Hash: a9bf8889efc141a936bf2d014585e612
-Requires: MASS, survival, Biobase
+Requires: Biobase, MASS, survival
 
 Package: munsell
 Source: CRAN
@@ -287,8 +287,8 @@ Package: phyloseq
 Source: Bioconductor
 Version: 1.8.2
 Hash: 9dc7ac0ab7b508028b8a34ec5ca9b30f
-Requires: ade4, cluster, foreach, vegan, plyr, multtest, igraph, ape,
-    biom, reshape2, scales, Biostrings, data.table, ggplot2, DESeq2
+Requires: ade4, ape, biom, Biostrings, cluster, data.table, DESeq2,
+    foreach, ggplot2, igraph, multtest, plyr, reshape2, scales, vegan
 
 Package: plyr
 Source: CRAN
@@ -306,6 +306,12 @@ Package: proto
 Source: CRAN
 Version: 0.3-10
 Hash: 668a9e87cedbdc5f56c396edf1bd2648
+
+Package: randomNames
+Source: CRAN
+Version: 0.0-6
+Hash: 11bffad9c9e96f2d03a0d889e86e0401
+Requires: data.table
 
 Package: RColorBrewer
 Source: CRAN
@@ -327,7 +333,7 @@ Package: reshape2
 Source: CRAN
 Version: 1.4
 Hash: b210925e978fd52ad5eb0822a353e7ce
-Requires: Rcpp, stringr, plyr
+Requires: plyr, Rcpp, stringr
 
 Package: RJSONIO
 Source: CRAN
@@ -344,7 +350,7 @@ Package: scales
 Source: CRAN
 Version: 0.2.4
 Hash: b8b1af97bd07818605223060386b00dd
-Requires: dichromat, labeling, RColorBrewer, munsell, plyr
+Requires: dichromat, labeling, munsell, plyr, RColorBrewer
 
 Package: stringr
 Source: CRAN
