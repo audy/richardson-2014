@@ -7,8 +7,8 @@
 #
 
 # miseq data
-MISEQOTUS?=''
-MISEQMETA?=''
+MISEQOTUS?='../data/miseq-dipp-samples-june-2014.csv'
+MISEQMETA?='../data/miseq-sample-data.csv'
 
 # hiseq data
 OTUTABLE?='../data/dipp-otus_filtered.csv'
@@ -41,6 +41,13 @@ TESTMETHOD?='glm'
 
 default: sliding_window picrust
 	echo 'done!'
+
+miseq-vs-hiseq.pdf: dipp-miseq.RData dipp-rf-uniq.RData
+	bin/miseq-analysis \
+	    --input-miseq dipp-miseq.RData \
+	    --input-hiseq dipp-rf-uniq.RData \
+	    --species $(SPECIES) \
+	    --pdf $@
 
 sliding_window: sliding-window-Phylum.pdf sliding-window-Class.pdf sliding-window-Order.pdf sliding-window-Family.pdf sliding-window-Genus.pdf sliding-window-Species.pdf sliding_window_qpcr
 

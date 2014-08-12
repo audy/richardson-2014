@@ -36,7 +36,6 @@ mymelt <- function(phy) {
     return(meta)
 }
 
-
 miseq <-
     dipp.miseq %>%
       subset_taxa(Species == species) %>%
