@@ -7,77 +7,46 @@ library(ggplot2)
 
 load('dipp-rf-uniq.RData')
 
-WINDOW_START <- 235
-WINDOW_STOP <- 329
+WINDOW_START <- 00
+WINDOW_STOP <- 600
 
 # remove any that weren't accepted by ICBR
 # "rejected by ICBR". Anything not in this list
 # has still not been checked by ICBR.
 
-rejected_by_icbr <- read.csv('../data/rejected-by-icbr.txt', header=F)[,1]
+skip <- read.csv('../data/rejected-by-icbr.txt', header=F,
+                             comment.char="#")[,1]
 
-# these samples had low DNA concentration, volume or
-# were too sheared.
+# samples already pulled
+# we have to make sure that we keep these
+pulled <- read.csv('../data/pulled-for-pacbio.txt', header=F)[,1]
 
-bad.dna<- c(64, 635, 177, 222, 293,
-          71, 94, 167, 204, 272, 281,
-          214, 282, 294,
-          297, 360, 365, 411, 465,
-          498, 483, 499, 501, 737,
-          519, 529, 634, 686, 735,
-          741, 772, 821, 830)
+dat <- data.frame(sample_data(dipp))
 
-SKIP <- c(rejected_by_icbr,
-          bad.dna)
-
-
-glom <- dipp %>%
-  subset_taxa(Species == 'dorei-vulgatus') %>%
-  tax_glom(taxrank = 'Species')
-
-otus <- data.frame(otu_table(glom))
-colnames(otus) <- 'Abundance'
-meta <- data.frame(sample_data(glom))
-dat <- cbind(otus, meta)
+holdout <- subset(dat, sample_id %in% pulled)
 
 samples <- dat %>%
   subset(age_at_sampling > WINDOW_START & age_at_sampling < WINDOW_STOP) %>%
   group_by(dipp_person) %>%
-  arrange(-Abundance) %>%
-  filter(!sample_id %in% SKIP) %>%
-  filter(row_number() == 1) %T>%
-  nrow %>%
+  filter(!dipp_person %in% holdout$dipp_person) %>%
+  filter(!sample_id %in% skip) %>%
+  filter(row_number() == 1) %>%
   data.frame()
 
-
-cases <- subset(samples, seroconverted)
-controls <- subset(samples, !seroconverted)
-
-ssize <- min(nrow(cases), nrow(controls))
-top.cases <- head(cases, ssize)
-top.controls <- head(controls, ssize)
-
-all <- rbind(top.cases, top.controls)
-
-if(!all$dipp_person %>%
- unique() %>%
- length() == nrow(all)) {
+if(length(unique(samples$dipp_person)) != nrow(samples)) {
   cat("WARNING: more than one sample per subject!\n")
 } else {
   cat("1 sample per subject. All Good!\n")
 }
 
-cat('I have', nrow(all), 'samples\n')
+cat('I have', nrow(samples), 'samples\n')
 
-if (sum(all$seroconverted) != sum(!all$seroconverted)) {
-  cat("Warning: n_cases != n_controls!\n")
-}
+cat('cases:', sum(samples$seroconverted), "\n")
+cat('controls:', sum(!samples$seroconverted), "\n")
 
-columns <- c('sample_id', 'Abundance', 'sample_date',
-             'age_at_sampling', 'seroconverted', 'total_reads')
 
-pulled <- read.csv('../data/pulled-for-pacbio.txt', header=F)
-to.check <- all[!all$sample_id %in% pulled[,1],]
+columns <- c('sample_id', 'sample_date', 'age_at_sampling', 'seroconverted',
+             'total_reads', 'pseudonym')
 
-write.csv(to.check[,columns], file='samples-for-pacbio.csv')
 
+write.csv(samples[,columns], file='samples-for-pacbio.csv')
