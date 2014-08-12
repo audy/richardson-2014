@@ -11,7 +11,7 @@ MISEQOTUS?='../data/miseq-dipp-samples-june-2014.csv'
 MISEQMETA?='../data/miseq-sample-data.csv'
 
 # hiseq data
-OTUTABLE?='../data/otu-tables/dipp-gg97-50r10s.csv'
+OTUTABLE?='../data/otu-tables/hiseq-gg97-minlen70.50r10s.csv'
 METADATA?='../data/sample-data/hiseq-samples.csv'
 METAGENOME?='../data/otu-tables/picrust-predicted-metagenome.csv'
 
