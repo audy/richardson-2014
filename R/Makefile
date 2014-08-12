@@ -11,19 +11,15 @@ MISEQOTUS?='../data/miseq-dipp-samples-june-2014.csv'
 MISEQMETA?='../data/miseq-sample-data.csv'
 
 # hiseq data
-OTUTABLE?='../data/dipp-otus_filtered.csv'
-METADATA?='../data/dipp-sample_data.csv'
-METAGENOME?='../data/dipp-predicted_metagenome.csv'
+OTUTABLE?='../data/otu-tables/dipp-gg97-50r10s.csv'
+METADATA?='../data/sample-data/hiseq-samples.csv'
+METAGENOME?='../data/otu-tables/picrust-predicted-metagenome.csv'
 
 # hiseq/miseq data
-TAXONOMIES?='../data/dipp-tax_table-merged_bacteroides.csv'
-TREE?='../data/97-otus.tree'
+TAXONOMIES?='../data/taxonomy-tables/greengenes-taxonomies-merged-bacteroides.csv'
+TREE?='../data/phylogenetic-trees/97-otus.tree'
 
-METAGENOME_TAX?='../data/dipp-kegg_orthologies.csv'
-
-# misc.
-QPCR='../data/dorei-vulgatus-predicted-copies.csv'
-PHYLOSEQ='dipp-rf-uniq.RData'
+METAGENOME_TAX?='../data/taxonomy-tables/kegg-orthologies.csv'
 
 ##
 # MISC PARAMETERS
