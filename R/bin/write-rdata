@@ -15,10 +15,13 @@ option_list <- c(make_option('--output', type='character', default='/dev/stdout'
                  make_option('--depth', type='numeric', default=10000),
                  make_option('--proportion', type='logical', action='store_true', default=FALSE),
                  make_option('--otutable', type='character'),
-                 make_option('--metadata', type='character'),
+                 make_option('--sample-data', type='character'),
+                 make_option('--subject-data', type='character'),
+                 make_option('--sequencing-data', type='character'),
                  make_option('--taxonomies', type='character'),
                  make_option('--normalize', type='character', default='none'),
                  make_option('--tree', type='character'),
+                 make_option('--site', type='character', required=T),
                  make_option('--keep_singles', type='logical', action='store_true', default=FALSE, help='keep single AA subjects (default=FALSE)'),
                  make_option('--subset', type='character', help='subset expression', default='none'),
                  make_option('--shuffle', default=FALSE, action='store_true', help='randomize case/control assignments'),
@@ -35,7 +38,9 @@ br <- function() cat("\n")
 
 cat("Creating Phyloseq bject\n")
 dipp <- load.dipp(otu.table=options$otutable,
-                  sam.data=options$metadata,
+                  sequencing.data=options$`sequencing-data`,
+                  sample.data=options$`sample-data`,
+                  subject.data=options$`subject-data`,
                   tax.table=options$taxonomies,
                   tree=options$tree)
 

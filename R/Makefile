@@ -110,6 +110,7 @@ dipp-rf-uniq.RData:
 		--output $@ \
 		--normalize $(NORMALIZE) \
 		--proportion \
+		--site Turku \
 		--otutable $(OTU_TABLE) \
 		--subject-data $(SUBJECT_DATA) \
 		--sample-data $(SAMPLE_DATA) \
