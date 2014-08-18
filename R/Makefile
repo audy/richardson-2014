@@ -6,20 +6,26 @@
 # INPUT FILE LOCATIONS
 #
 
+OTU_TABLE='../data/otu-tables/hiseq-gg97-minlen70.50r10s.csv'
+
+ifeq ($(TAXCOLLECTOR), 'true')
+  TAXONOMIES?='../data/taxonomy-tables/greengenes-with-taxcollector-taxonomy.csv'
+else
+  TAXONOMIES?='../data/taxonomy-tables/greengenes-taxonomies-merged-bacteroides.csv'
+endif
+
 # miseq data
-MISEQOTUS?='../data/miseq-dipp-samples-june-2014.csv'
-MISEQMETA?='../data/miseq-sample-data.csv'
+MISEQOTUS?='../data/miseq-tc97.minlen275.50r10s.csv'
 
-# hiseq data
-OTUTABLE?='../data/otu-tables/hiseq-gg97-minlen70.50r10s.csv'
-METADATA?='../data/sample-data/hiseq-samples.csv'
-METAGENOME?='../data/otu-tables/picrust-predicted-metagenome.csv'
+SUBJECT_DATA?='../data/dipp-subjects.csv'
+SAMPLE_DATA?='../data/dipp-stool-samples.csv'
+SEQUENCING_DATA?='../data/dipp-sequencing-runs.csv'
 
-# hiseq/miseq data
-TAXONOMIES?='../data/taxonomy-tables/greengenes-taxonomies-merged-bacteroides.csv'
 TREE?='../data/phylogenetic-trees/97-otus.tree'
 
+# picrust stuff (deprecated)
 METAGENOME_TAX?='../data/taxonomy-tables/kegg-orthologies.csv'
+METAGENOME?='../data/otu-tables/picrust-predicted-metagenome.csv'
 
 ##
 # MISC PARAMETERS
@@ -93,7 +99,7 @@ dipp-rf-uniq-site-%.RData:
 		--output $@ \
 		--normalize $(NORMALIZE) \
 		--proportion \
-		--otutable $(OTUTABLE) \
+		--otutable $(OTU_TABLE) \
 		--metadata $(METADATA) \
 		--taxonomies $(TAXONOMIES) \
 		--subset 'site == "$*"'
@@ -104,8 +110,10 @@ dipp-rf-uniq.RData:
 		--output $@ \
 		--normalize $(NORMALIZE) \
 		--proportion \
-		--otutable $(OTUTABLE) \
-		--metadata $(METADATA) \
+		--otutable $(OTU_TABLE) \
+		--subject-data $(SUBJECT_DATA) \
+		--sample-data $(SAMPLE_DATA) \
+		--sequencing-data $(SEQUENCING_DATA) \
 		--taxonomies $(TAXONOMIES) \
 		--proportion
 
@@ -124,7 +132,7 @@ dipp-for-richness.RData:
 		--unique \
 		--output $@ \
 		--normalize rarefaction \
-		--otutable $(OTUTABLE) \
+		--otutable $(OTU_TABLE) \
 		--metadata $(METADATA) \
 		--taxonomies $(TAXONOMIES)
 
