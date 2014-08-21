@@ -33,6 +33,7 @@ options <- parse_args(parser)
 
 suppressMessages(suppressWarnings(source('./lib/load_dipp.R')))
 suppressMessages(suppressWarnings(source('./lib/normalize.R')))
+suppressMessages(suppressWarnings(source('./lib/misc.R')))
 
 br <- function() cat("\n")
 
@@ -74,24 +75,7 @@ dipp
 br()
 
 if (options$unique == TRUE) {
-  library(plyr)
-  meta <- data.frame(sample_data(dipp), check.names=F)
-
-  # ddply drops rownames.
-  meta$illumina_id <- rownames(meta)
-
-  # get total number of reads
-  meta$total_reads <- rowSums(otu_table(dipp))
-
-  uniqued <- ddply(meta, ~sample_id, function(x) {
-        # sort by total reads in descending order
-        sorted <- x[with(x, order(-total_reads)),]
-        sorted[1,]
-  })
-
-  # put back rownames.
-  rownames(uniqued) <- uniqued$illumina_id
-  dipp <- phyloseq(sample_data(uniqued), otu_table(dipp), tax_table(dipp))
+  dipp <- unique_samples(dipp)
 }
 
 if (options$subset != 'none') {
