@@ -23,20 +23,28 @@ library(phyloseq)
   phyloseq(otus, meta, taxa, tree)
 }
 
-fix_subject_columns <- function(sd) {
-    sd$DOB <- as.Date(sd$DOB, '%m/%d/%y')
-    sd$date_ICA <- as.Date(sd$date_ICA, '%m/%d/%y')
-    sd$date_GADA <- as.Date(sd$date_GADA, '%m/%d/%y')
-    sd$date_IA2A <- as.Date(sd$date_IA2A, '%m/%d/%y')
-    sd$date_IAA <- as.Date(sd$date_IAA, '%m/%d/%y')
-    sd$date_T1D <- as.Date(sd$date_T1D, '%m/%d/%y')
-    sd$date_first_sc <- as.Date(sd$date_first_sc, '%m/%d/%y')
-    return(sd)
+fix_subject_columns <- function(df) {
+    df <- within(df, {
+        DOB <- as.Date(DOB, '%m/%d/%y')
+        date_ICA <- as.Date(date_ICA, '%m/%d/%y')
+        date_GADA <- as.Date(date_GADA, '%m/%d/%y')
+        date_IA2A <- as.Date(date_IA2A, '%m/%d/%y')
+        date_IAA <- as.Date(date_IAA, '%m/%d/%y')
+        date_T1D <- as.Date(date_T1D, '%m/%d/%y')
+        date_first_sc <- as.Date(date_first_sc, '%m/%d/%y')
+        age_GADA <- as.numeric(date_GADA - DOB)
+        age_IAA <- as.numeric(date_IAA - DOB)
+        age_IA2A <- as.numeric(date_IA2A - DOB)
+        age_ICA <- as.numeric(date_ICA - DOB)
+    })
+    return(df)
 }
 
 # coerve columns
 fix_sample_columns <- function(df) {
-    df$sample_date <- as.Date(df$sample_date, '%m/%d/%y')
+    df <- within(df, {
+                 sample_date <- as.Date(sample_date, '%m/%d/%y')
+    })
     return(df)
 }
 
