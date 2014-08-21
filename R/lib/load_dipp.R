@@ -23,11 +23,26 @@ library(phyloseq)
   phyloseq(otus, meta, taxa, tree)
 }
 
+fix_subject_columns <- function(sd) {
+    sd$DOB <- as.Date(sd$DOB, '%m/%d/%y')
+    sd$date_ICA <- as.Date(sd$date_ICA, '%m/%d/%y')
+    sd$date_GADA <- as.Date(sd$date_GADA, '%m/%d/%y')
+    sd$date_IA2A <- as.Date(sd$date_IA2A, '%m/%d/%y')
+    sd$date_IAA <- as.Date(sd$date_IAA, '%m/%d/%y')
+    sd$date_T1D <- as.Date(sd$date_T1D, '%m/%d/%y')
+    sd$date_first_sc <- as.Date(sd$date_first_sc, '%m/%d/%y')
+    return(sd)
+}
+
 # coerve columns
-fix_columns <- function(df) {
+fix_sample_columns <- function(df) {
     df$sample_date <- as.Date(df$sample_date, '%m/%d/%y')
-    df$DOB <- as.Date(df$DOB, '%m/%d/%y')
+    return(df)
+}
+
+compute_derived_columns <- function(df) {
     df <- within(df, age_at_sampling <- as.numeric(sample_date - DOB))
+    return(df)
 }
 
 merge_tables <- function(samples, subjects, sequences) {
@@ -39,9 +54,9 @@ merge_tables <- function(samples, subjects, sequences) {
 
 load_dipp_metadata <- function(sample_data=NULL, subject_data=NULL,
                                sequencing_data=NULL) {
-  samples <- read.csv(sample_data)
-  subjects <- read.csv(subject_data)
+  samples <- fix_sample_columns(read.csv(sample_data))
+  subjects <- fix_subject_columns(read.csv(subject_data))
   sequencings <- read.csv(sequencing_data)
   merged <- merge_tables(samples, subjects, sequencings)
-  fixed <- fix_columns(merged)
+  fixed <- compute_derived_columns(merged)
 }
