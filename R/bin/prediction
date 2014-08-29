@@ -1,0 +1,78 @@
+#!/usr/bin/env Rscript
+
+library(optparse)
+
+option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.RData'),
+                 make_option('--rank', type='character', default='Species'),
+                 make_option('--min_age', type='numeric', default=150),
+                 make_option('--max_age', type='numeric', default=300),
+                 make_option('--variable')
+                 )
+
+parser <- OptionParser(option_list = option_list)
+options <- parse_args(parser)
+
+extra_vars <- c(
+          'Gender',
+          'vaginal_delivery',
+          'DQA_03',
+          'DQA_05',
+          'DQB_02',
+          'DQB_0201',
+          'DQB_0301',
+          'DQB_0302',
+          'DQB_0303',
+          'DQB_0501',
+          'DQB_0604')
+
+
+library(phyloseq)
+library(plyr)
+library(ggplot2)
+library(boot)
+library(pROC)
+
+source('lib/se.R')
+
+load(options$input)
+dipp <- tax_glom(dipp, taxrank=options$rank)
+
+
+ss1 <- subset_samples(dipp, age_at_sampling <= 300)
+ss2 <- subset_samples(ss1, age_at_sampling >= 150)
+dipp <- ss2
+
+dipp <- subset_taxa(dipp, Species == Sys.getenv('Species'))
+
+meta <- data.frame(sample_data(dipp))
+otus <- data.frame(otu_table(dipp), check.names=F)
+
+taxa_names <- make.names(data.frame(tax_table(dipp))[,options$rank])
+
+for (n in taxa_names) cat(n, '\n')
+
+colnames(otus) <- taxa_names
+
+dat <- otus
+
+dat$dipp_person <- meta$dipp_person
+dat$seroconverted <- meta$seroconverted
+
+for (v in extra_vars) dat[,v] <- meta[,v]
+
+f1 <- as.formula(paste('dorei.vulgatus ~', paste(extra_vars, collapse='+')))
+
+do_test <- function(d, i) {
+  ss <- d[i,]
+  m0 <- glm(f1, data=ss)
+  ss$r <- residuals(m0, type='response')
+  mod <- glm(seroconverted ~ r, data=ss, family=binomial(link='logit'))
+  prob <- predict(mod ,type=c("response"))
+  as.numeric(roc(seroconverted ~ prob, data = ss)$auc)
+}
+
+b <- boot(dat, do_test, R=100)
+
+b$t0
+
+boot.ci(b)
