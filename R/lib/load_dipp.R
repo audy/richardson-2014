@@ -36,6 +36,7 @@ fix_subject_columns <- function(df) {
         age_IAA <- as.numeric(date_IAA - DOB)
         age_IA2A <- as.numeric(date_IA2A - DOB)
         age_ICA <- as.numeric(date_ICA - DOB)
+        age_T1D <- as.numeric(date_T1D - DOB)
     })
     return(df)
 }
@@ -43,7 +44,7 @@ fix_subject_columns <- function(df) {
 # coerve columns
 fix_sample_columns <- function(df) {
     df <- within(df, {
-                 sample_date <- as.Date(sample_date, '%m/%d/%y')
+        sample_date <- as.Date(sample_date, '%m/%d/%y')
     })
     return(df)
 }
