@@ -35,9 +35,6 @@ WIDTH?=201 # width of sliding window in days
 
 TESTMETHOD?='glm'
 
-default: sliding_window glms boxplots mw-all
-	@echo 'done!'
-
 sliding_window_qpcr: sliding-window-qpcr-bacteroides.pdf sliding-window-qpcr-dorei.pdf
 
 sliding_window: sliding-window-Phylum.pdf sliding-window-Genus.pdf sliding-window-Species.pdf sliding_window_qpcr
@@ -47,6 +44,9 @@ boxplots: boxplot-Phylum.pdf boxplot-Genus.pdf boxplot-Species.pdf
 mw-all: mw-all-Phylum.pdf mw-all-Genus.pdf mw-all-Species.pdf
 
 tables: rank_tables/Phylum.csv rank_tables/Genus.csv rank_tables/Species.csv
+
+default: sliding_window glms boxplots mw-all
+	@echo 'done!'
 
 # core data object
 # generates an rdata file containing a phyloseq dataset w/ main
@@ -65,7 +65,7 @@ dipp.Rdata:
 		--taxonomies $(TAXONOMIES) \
 		--proportion
 
-sliding-window-diversity.pdf: dipp-for-richness.RData
+sliding-window-diversity.pdf: dipp-for-richness.rdata
 	bin/sliding-window-diversity \
 		--input $< \
 		--output $@ \
@@ -81,7 +81,7 @@ autoimmunity-timing.pdf:
 	mv Rplots autoimmunity-timing.pdf
 
 # S Fig XX
-mw-all-%.pdf: dipp.RData
+mw-all-%.pdf: dipp.rdata
 	bin/all-sample-mw-test \
 		--input $< \
 		--pdf $@ \
@@ -89,7 +89,7 @@ mw-all-%.pdf: dipp.RData
 		--table-out mw-all-$*.csv
 
 # figure 1 a, b, c
-glm-%.pdf: dipp.RData
+glm-%.pdf: dipp.Rdata
 	bin/full-glm \
 		--input $< \
 		--output "$@".csv \
@@ -98,7 +98,7 @@ glm-%.pdf: dipp.RData
 		--out-table glm-$*.csv
 
 # unused (throw away?)
-boxplot-%.pdf: dipp.RData
+boxplot-%.pdf: dipp.rdata
 	bin/boxplots \
 		--start 300 \
 		--stop 500 \
@@ -106,19 +106,8 @@ boxplot-%.pdf: dipp.RData
 		--output $@ \
 		--input $<
 
-# for figure 4 b, c
-dipp-miseq.RData:
-	bin/write-rdata \
-	    --unique \
-	    --output $@ \
-	    --normalize $(NORMALIZE) \
-	    --otutable $(MISEQOTUS) \
-	    --metadata $(METADATA) \
-	    --taxonomies $(TAXONOMIES) \
-	    --proportion
-
 # Figure 2 a, b, c
-sliding-window-%.pdf: dipp.RData
+sliding-window-%.pdf: dipp.rdata
 	bin/sliding-window-smooth \
 		--rank $* \
 		--output $@ \
@@ -127,18 +116,8 @@ sliding-window-%.pdf: dipp.RData
 		--top $(TOP) \
 		--by $(BY)
 
-# For Figure 3 b, c
-dipp-qpcr-%.RData:
-	bin/write-rdata \
-		--unique \
-		--output $@ \
-		--otutable ../data/$*.csv \
-		--metadata $(METADATA) \
-		--taxonomies $(TAXONOMIES) \
-		--normalize none
-
 # Figure 3b
-sliding-window-qpcr-bacteroides.pdf: dipp-qpcr-bacteroides.RData
+sliding-window-qpcr-bacteroides.pdf: dipp-qpcr-bacteroides.rdata
 	bin/sliding-window-smooth \
 		--input $< \
 		--output $@ \
@@ -148,7 +127,7 @@ sliding-window-qpcr-bacteroides.pdf: dipp-qpcr-bacteroides.RData
 		--width $(WIDTH)
 
 # Figure 3c
-sliding-window-qpcr-dorei.pdf: dipp-qpcr-dorei.RData
+sliding-window-qpcr-dorei.pdf: dipp-qpcr-dorei.rdata
 	bin/sliding-window-smooth \
 		--input $< \
 		--output $@ \
@@ -157,27 +136,17 @@ sliding-window-qpcr-dorei.pdf: dipp-qpcr-dorei.RData
 		--absolute \
 		--width $(WIDTH)
 
-# for S. Fig 1 
-dipp-for-richness.RData:
-	bin/write-rdata \
-		--unique \
-		--output $@ \
-		--normalize rarefaction \
-		--otutable $(OTU_TABLE) \
-		--metadata $(METADATA) \
-		--taxonomies $(TAXONOMIES)
-
 rank_tables:
 	mkdir -p rank_tables
 
 # builds OTU tables with names at specific rank
 # useful for people who like to stare at Excel
-rank_tables/%.csv: rank_tables dipp.RData
+rank_tables/%.csv: rank_tables dipp.rdata
 	bin/make-rank-table \
 	    --rank $* \
 	    --output $@ \
-	    --input dipp.RData
+	    --input dipp.rdata
 
 clean:
-	rm -f *.RData
+	rm -f *.rdata
 	rm -f *.pdf
