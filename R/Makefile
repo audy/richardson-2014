@@ -1,5 +1,3 @@
-# vim: set noexpandtab
-
 # run `make` to build graphs/analyses
 
 ##
@@ -23,15 +21,11 @@ SEQUENCING_DATA?='../data/dipp-sequencing-runs.csv'
 
 TREE?='../data/phylogenetic-trees/97-otus.tree'
 
-# picrust stuff (deprecated)
-METAGENOME_TAX?='../data/taxonomy-tables/kegg-orthologies.csv'
-METAGENOME?='../data/otu-tables/picrust-predicted-metagenome.csv'
-
 ##
 # MISC PARAMETERS
 #
 
-NORMALIZE?='edger' # method for correcting for differences in sequencing depth
+NORMALIZE?='rarefy' # method for correcting for differences in sequencing depth
 
 FDR?='BH' # fdr correction method in glm script
 TOP?=4 # top n taxa to plot
@@ -41,70 +35,23 @@ WIDTH?=201 # width of sliding window in days
 
 TESTMETHOD?='glm'
 
-default: sliding_window picrust
-	echo 'done!'
+default: sliding_window glms boxplots mw-all
+	@echo 'done!'
 
-miseq-vs-hiseq.pdf: dipp-miseq.RData dipp-rf-uniq.RData
-	bin/miseq-analysis \
-	    --input-miseq dipp-miseq.RData \
-	    --input-hiseq dipp-rf-uniq.RData \
-	    --species $(SPECIES) \
-	    --pdf $@
+sliding_window_qpcr: sliding-window-qpcr-bacteroides.pdf sliding-window-qpcr-dorei.pdf
 
-sliding_window: sliding-window-Phylum.pdf sliding-window-Class.pdf sliding-window-Order.pdf sliding-window-Family.pdf sliding-window-Genus.pdf sliding-window-Species.pdf sliding_window_qpcr
+sliding_window: sliding-window-Phylum.pdf sliding-window-Genus.pdf sliding-window-Species.pdf sliding_window_qpcr
 
-sliding-window-diversity.pdf: dipp-for-richness.RData
-	bin/sliding-window-diversity \
-		--input $< \
-		--output $@ \
-		--width 200 \
-		--method Shannon
-
-boxplots: boxplot-Phylum.pdf boxplot-Class.pdf boxplot-Order.pdf boxplot-Family.pdf boxplot-Genus.pdf boxplot-Species.pdf
+boxplots: boxplot-Phylum.pdf boxplot-Genus.pdf boxplot-Species.pdf
 
 mw-all: mw-all-Phylum.pdf mw-all-Genus.pdf mw-all-Species.pdf
 
-mw-all-%.pdf: dipp-rf-uniq.RData
-	bin/all-sample-mw-test \
-		--input $< \
-		--pdf $@ \
-		--rank $* \
-		--table-out mw-all-$*.csv
+tables: rank_tables/Phylum.csv rank_tables/Genus.csv rank_tables/Species.csv
 
-glms: glm-Phylum.pdf glm-Genus.pdf glm-Species.pdf
-
-autoimmunity-timing.pdf:
-	bin/autoimmunity-timing
-	mv Rplots autoimmunity-timing.pdf
-
-glm-%.pdf: dipp-rf-uniq.RData
-	bin/full-glm \
-		--input $< \
-		--output "$@".csv \
-		--pdf $@ \
-		--rank $* \
-		--out-table glm-$*.csv
-
-boxplot-%.pdf: dipp-rf-uniq.RData
-	bin/boxplots \
-		--start 300 \
-		--stop 500 \
-		--rank $* \
-		--output $@ \
-		--input $<
-
-dipp-rf-uniq-site-%.RData:
-	bin/write-rdata \
-		--unique \
-		--output $@ \
-		--normalize $(NORMALIZE) \
-		--proportion \
-		--otutable $(OTU_TABLE) \
-		--metadata $(METADATA) \
-		--taxonomies $(TAXONOMIES) \
-		--subset 'site == "$*"'
-
-dipp-rf-uniq.RData:
+# core data object
+# generates an rdata file containing a phyloseq dataset w/ main
+# experimental data (subject data, sample data, otu table, taxonomies)
+dipp.Rdata:
 	bin/write-rdata \
 		--unique \
 		--output $@ \
@@ -118,6 +65,48 @@ dipp-rf-uniq.RData:
 		--taxonomies $(TAXONOMIES) \
 		--proportion
 
+sliding-window-diversity.pdf: dipp-for-richness.RData
+	bin/sliding-window-diversity \
+		--input $< \
+		--output $@ \
+		--width 200 \
+		--method Shannon
+
+# figure 1
+glms: glm-Phylum.pdf glm-Genus.pdf glm-Species.pdf
+
+# figure 4
+autoimmunity-timing.pdf:
+	bin/autoimmunity-timing
+	mv Rplots autoimmunity-timing.pdf
+
+# S Fig XX
+mw-all-%.pdf: dipp.RData
+	bin/all-sample-mw-test \
+		--input $< \
+		--pdf $@ \
+		--rank $* \
+		--table-out mw-all-$*.csv
+
+# figure 1 a, b, c
+glm-%.pdf: dipp.RData
+	bin/full-glm \
+		--input $< \
+		--output "$@".csv \
+		--pdf $@ \
+		--rank $* \
+		--out-table glm-$*.csv
+
+# unused (throw away?)
+boxplot-%.pdf: dipp.RData
+	bin/boxplots \
+		--start 300 \
+		--stop 500 \
+		--rank $* \
+		--output $@ \
+		--input $<
+
+# for figure 4 b, c
 dipp-miseq.RData:
 	bin/write-rdata \
 	    --unique \
@@ -128,25 +117,17 @@ dipp-miseq.RData:
 	    --taxonomies $(TAXONOMIES) \
 	    --proportion
 
-dipp-for-richness.RData:
-	bin/write-rdata \
-		--unique \
+# Figure 2 a, b, c
+sliding-window-%.pdf: dipp.RData
+	bin/sliding-window-smooth \
+		--rank $* \
 		--output $@ \
-		--normalize rarefaction \
-		--otutable $(OTU_TABLE) \
-		--metadata $(METADATA) \
-		--taxonomies $(TAXONOMIES)
+		--input $< \
+		--width $(WIDTH) \
+		--top $(TOP) \
+		--by $(BY)
 
-dipp-rf-uniq-metagenome.RData:
-	bin/write-rdata \
-		--unique \
-		--output $@ \
-		--normalize $(NORMALIZE) \
-		--proportion \
-		--otutable $(METAGENOME) \
-		--metadata $(METADATA) \
-		--taxonomies $(METAGENOME_TAX)
-
+# For Figure 3 b, c
 dipp-qpcr-%.RData:
 	bin/write-rdata \
 		--unique \
@@ -156,8 +137,7 @@ dipp-qpcr-%.RData:
 		--taxonomies $(TAXONOMIES) \
 		--normalize none
 
-sliding_window_qpcr: sliding-window-qpcr-bacteroides.pdf sliding-window-qpcr-dorei.pdf
-
+# Figure 3b
 sliding-window-qpcr-bacteroides.pdf: dipp-qpcr-bacteroides.RData
 	bin/sliding-window-smooth \
 		--input $< \
@@ -167,6 +147,7 @@ sliding-window-qpcr-bacteroides.pdf: dipp-qpcr-bacteroides.RData
 		--absolute \
 		--width $(WIDTH)
 
+# Figure 3c
 sliding-window-qpcr-dorei.pdf: dipp-qpcr-dorei.RData
 	bin/sliding-window-smooth \
 		--input $< \
@@ -176,51 +157,27 @@ sliding-window-qpcr-dorei.pdf: dipp-qpcr-dorei.RData
 		--absolute \
 		--width $(WIDTH)
 
-sliding-window-%.pdf: dipp-rf-uniq.RData
-	bin/sliding-window-smooth \
-		--rank $* \
+# for S. Fig 1 
+dipp-for-richness.RData:
+	bin/write-rdata \
+		--unique \
 		--output $@ \
-		--input $< \
-		--width $(WIDTH) \
-		--top $(TOP) \
-		--by $(BY)
-
-phyloseq: dipp-rf-uniq.RData
-
-picrust: picrust-X0.pdf picrust-X1.pdf picrust-X2.pdf picrust-X3.pdf
-
-glmulti-%.txt: dipp-rf-uniq.RData
-	bin/glmulti-analysis \
-		--input $< \
-		--rank $% \
-		--top $(TOP) \
-		> $@
-
-glmulti-picrust-%.txt: dipp-rf-uniq-metagenome.RData
-	bin/glmulti-analysis \
-		--input $< \
-		--rank $% \
-		--top $(TOP) \
-		> $@
-
-picrust-%.pdf: dipp-rf-uniq-metagenome.RData
-	bin/sliding-window-smooth \
-		--rank $* \
-		--output $@ \
-		--input $< \
-		--width $(WIDTH)
-
-ordination.pdf: dipp-rf-uniq.RData
-	bin/ordination --input $< --output ordination.pdf
+		--normalize rarefaction \
+		--otutable $(OTU_TABLE) \
+		--metadata $(METADATA) \
+		--taxonomies $(TAXONOMIES)
 
 rank_tables:
 	mkdir -p rank_tables
 
-rank_tables/%.csv: rank_tables dipp-rf-uniq.RData
-	bin/make-rank-table --rank $* --output $@ --input dipp-rf-uniq.RData
-
-tables: rank_tables/Phylum.csv rank_tables/Class.csv rank_tables/Order.csv rank_tables/Family.csv rank_tables/Genus.csv rank_tables/Species.csv
+# builds OTU tables with names at specific rank
+# useful for people who like to stare at Excel
+rank_tables/%.csv: rank_tables dipp.RData
+	bin/make-rank-table \
+	    --rank $* \
+	    --output $@ \
+	    --input dipp.RData
 
 clean:
-	rm *.RData
-	rm *.pdf
+	rm -f *.RData
+	rm -f *.pdf
