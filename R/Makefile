@@ -13,7 +13,8 @@ else
 endif
 
 # miseq data
-MISEQOTUS?='../data/miseq-tc97.minlen275.50r10s.csv'
+OTU_TABLE_MISEQ?='../data/otu-tables/miseq-august.assembled-against-centroids.csv'
+TAX_TABLE_MISEQ?='../data/taxonomy-tables/greengenes-centroids-taxonomies-merged.csv'
 
 SUBJECT_DATA?='../data/dipp-subjects.csv'
 SAMPLE_DATA?='../data/dipp-stool-samples.csv'
@@ -64,6 +65,21 @@ dipp.Rdata:
 		--sequencing-data $(SEQUENCING_DATA) \
 		--taxonomies $(TAXONOMIES) \
 		--proportion
+
+dipp-miseq.Rdata:
+	bin/write-rdata \
+		--unique \
+		--output $@ \
+		--normalize $(NORMALIZE) \
+		--proportion \
+		--site Turku \
+		--otutable $(OTU_TABLE_MISEQ) \
+		--subject-data $(SUBJECT_DATA) \
+		--sample-data $(SAMPLE_DATA) \
+		--sequencing-data $(SEQUENCING_DATA) \
+		--taxonomies $(TAXONOMIES) \
+		--proportion
+
 
 sliding-window-diversity.pdf: dipp-for-richness.rdata
 	bin/sliding-window-diversity \
