@@ -166,13 +166,13 @@ plot_results <- function(alpha, min=0) {
   mdat.s$variable <- factor(mdat.s$variable, levels=unique(mdat.s[with(mdat.s, order(-value)),]$variable))
   cat(nrow(mdat.s), '\n')
   p<-ggplot(mdat.s,
-         aes(x=age,
+         aes(x=age/30,
              y=value,
              fill=status, color=status,
              linetype=status)) +
   geom_smooth(alpha=0.30,size=1) +
   facet_wrap(~variable, scale='free_y') +
-  xlim(100, 800) +
+  scale_x_continuous(breaks=seq(0, 48, by=3), limits=c(3, 30)) +
   scale_y_continuous(labels=scientific) +
   ggplot.theme +
   scale_color_manual(values=c("#999999",
@@ -180,13 +180,13 @@ plot_results <- function(alpha, min=0) {
   scale_fill_manual(values=c("#999999",
                              "#FFAB00")) +
   ggtitle(paste(options$rank, ' (alpha = ', alpha, ')', sep='')) +
-  geom_vline(x=479, color='purple', alpha=0.75) +
-  geom_vline(x=479-68, linetype='dashed', color='purple', alpha=0.75) +
-  geom_vline(x=479+68, linetype='dashed', color='purple', alpha=0.75) +
+  geom_vline(x=479/30, color='purple', alpha=0.75) +
+  geom_vline(x=(479-68)/30, linetype='dashed', color='purple', alpha=0.75) +
+  geom_vline(x=(479+68)/30, linetype='dashed', color='purple', alpha=0.75) +
   ycoords +
   ystuff +
   yscale +
-  xlab('Age (days)')
+  xlab('Age (Months)')
   print(p)
 }
 
