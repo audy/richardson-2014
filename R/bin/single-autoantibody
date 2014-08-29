@@ -46,16 +46,17 @@ maxd <- ddply(df, ~dipp_person, function(x) {
  x
 })
 
-maxd %>%
+p <- maxd %>%
   subset(seroconverted) %>%
-  wilcox.test(age_at_sampling ~ aa_group, ., alternative='less')
+  wilcox.test(age_at_sampling ~ aa_group, ., alternative='less')$p.value
 
 p2 <- ggplot(subset(maxd, seroconverted),
        aes(x=aa_group,
            y=age_at_sampling/30)) +
 geom_boxplot() +
 ylab('Age of Peak') +
-ggtitle(bquote(atop('Age of B. dorei peak', atop('p = 0.0192 (Mann-Whitney)')))) 
+ggtitle(bquote(atop('Age of B. dorei peak', atop(paste('p = ', p,
+                                                       '(Mann-Whitney)')))) )
 
 p4 <- ggplot(subset(maxd, seroconverted),
        aes(x=aa_group,

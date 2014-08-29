@@ -1,0 +1,40 @@
+#!/usr/bin/env Rscript
+
+library(ggplot2)
+library(ggthemr)
+
+ggthemr('fresh')
+
+subjects <- read.csv('../data/dipp-subjects.csv')
+
+subjects <- within(subjects, {
+       vaginal_delivery <- Mode_of_Delivery == 'vaginal'
+})
+
+subjects$aa_group <- 'Control'
+subjects[subjects$aa_number == 1,]$aa_group <- '1 AA'
+subjects[subjects$aa_number >= 2,]$aa_group <- '2+ AA'
+
+x <- table(subjects[,c('vaginal_delivery',
+                  'seroconverted')])
+
+pv1 <- prop.test(x)$p.value
+
+plot1 <- ggplot(subjects,
+       aes(x=seroconverted,
+           fill=vaginal_delivery)) +
+geom_bar(position='dodge') +
+ggtitle(paste('p = ', sprintf('%0.3f', pv1), '(X^2)'))
+
+x <- table(subset(subjects, seroconverted)[,c('vaginal_delivery',
+                  'aa_group')])
+
+pv2 <- prop.test(x)$p.value
+
+plot2 <- ggplot(subjects,
+       aes(x=aa_group,
+           fill=vaginal_delivery)) +
+geom_bar(position='dodge') +
+ggtitle(paste('p = ', sprintf('%0.3f', pv2), '(X^2)'))
+
+multiplot(plot1, plot2)

@@ -1,0 +1,118 @@
+#!/usr/bin/env Rscript
+
+library(phyloseq)
+library(ggplot2)
+library(magrittr)
+library(ggthemr)
+library(plyr)
+
+source('lib/misc.R')
+
+load('dipp.Rdata')
+subjects <- read.csv('../data/dipp-subjects.csv')
+
+dipp
+
+ggthemr('fresh')
+
+se <- function(x) sd(x)/sqrt(length(x))
+
+bf <- subset(subjects, !is.na(Duration_exclusive_breast_feeding_weeks) & 
+             !is.na(Duration_Breast_Feeding_months))
+
+ddply(bf, ~ seroconverted, function(x) {
+  c(median=median(x$Duration_exclusive_breast_feeding_weeks),
+    se=se(x$Duration_exclusive_breast_feeding_weeks))
+})
+
+ggplot(bf, aes(x=Breast_feeding_any,
+               fill=seroconverted)) +
+geom_bar(position='dodge')
+
+# total breast feeding (months)
+pv1 <- wilcox.test(Duration_Breast_Feeding_months ~ seroconverted,
+            data=bf)$p.value
+
+plot1 <- ggplot(bf,
+       aes(x=seroconverted,
+           y=Duration_Breast_Feeding_months)) +
+geom_boxplot() +
+ggtitle(paste('p = ', sprintf('%0.3f', pv1), '(Mann-Whitney)'))
+
+# exclusive breast feeding (weeks)
+pv2 <- wilcox.test(Duration_exclusive_breast_feeding_weeks ~ seroconverted,
+            data=bf)$p.value
+
+plot2 <- ggplot(bf,
+       aes(x=seroconverted,
+           y=Duration_exclusive_breast_feeding_weeks)) +
+geom_boxplot() +
+ggtitle(paste('p = ', sprintf('%0.3f', pv2), '(Mann-Whitney)'))
+
+bfs <- subset(bf, seroconverted)
+
+bfs$aa_group <- 'Control'
+bfs[bfs$aa_number == 1,]$aa_group <- '1 AA'
+bfs[bfs$aa_number >= 2,]$aa_group <- '2+ AA'
+
+# exclusive breast feeding
+
+
+pv3 <- wilcox.test(Duration_exclusive_breast_feeding_weeks ~ aa_group,
+            data=bfs)$p.value
+
+plot3 <- ggplot(bfs,
+       aes(x=aa_group,
+           y=Duration_exclusive_breast_feeding_weeks)) +
+geom_boxplot() +
+ggtitle(paste('p = ', sprintf('%0.3f', pv3), '(Mann-Whitney)'))
+
+# total breast feeding
+pv4 <- wilcox.test(Duration_Breast_Feeding_months ~ aa_group,
+            data=bfs)$p.value
+
+
+plot4 <- ggplot(bfs,
+       aes(x=aa_group,
+           y=Duration_Breast_Feeding_months)) +
+geom_boxplot() +
+ggtitle(paste('p = ', sprintf('%0.3f', pv4), '(Mann-Whitney)'))
+
+
+multiplot(plot1,
+          plot2,
+          plot3,
+          plot4,
+          cols=2)
+
+
+# look @ solid food and B. dorei
+
+dat <- dipp %>%
+  subset_taxa(Species == 'dorei-vulgatus') %>%
+  tax_glom(taxrank = 'Species') %>%
+  psmelt()
+
+dat <- subset(dat, !is.na(Duration_exclusive_breast_feeding_weeks))
+dat <- subset(dat, !is.na(Duration_Breast_Feeding_months))
+
+ggplot(dat,
+       aes(x=age_at_sampling,
+           y=Abundance,
+           color=Duration_exclusive_breast_feeding_weeks > 15)) +
+geom_smooth() +
+xlim(100, 600) +
+geom_vline(xintercept=15*7)
+
+ggplot(dat,
+       aes(x=age_at_sampling,
+           y=Abundance,
+           color=Duration_Breast_Feeding_months > 4 )) +
+geom_smooth() +
+xlim(100, 600)
+
+ggplot(dat,
+       aes(y=Abundance,
+           x=Duration_Breast_Feeding_months,
+           color=seroconverted)) +
+geom_point()
