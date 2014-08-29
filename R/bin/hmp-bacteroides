@@ -1,0 +1,41 @@
+#!/usr/bin/env Rscript
+
+library(phyloseq)
+library(magrittr)
+library(ggplot2)
+library(scales)
+library(dplyr)
+
+load('../hmp.Rdata')
+
+ss <- phy %>%
+  subset_samples(BODY_SITE == 'UBERON:feces') %>%
+  transform_sample_counts(function(x) x/sum(x)) %>%
+  subset_taxa(Phylum == 'Bacteroidetes') %>%
+  subset_taxa(Genus == 'Bacteroides') %>%
+  tax_glom(taxrank = 'Species')
+
+
+dat <- ss %>%
+  psmelt() %>%
+  group_by(Species) %>%
+  summarize(median=median(Abundance),
+            se=sd(Abundance)/sqrt(length(Abundance)),
+            n=length(Abundance))
+
+
+dat
+
+ggplot(dat, aes(x=reorder(Species, median),
+            y=median)) +
+geom_bar(stat='identity') +
+geom_errorbar(aes(ymin = median - se,
+                    ymax = median + se), width=0) +
+coord_flip() +
+theme_bw() +
+scale_y_continuous(labels=percent) +
+ggtitle('Bacteroides (HMP Feces)')
+
+x <- ss %>%
+  tax_glom(taxrank = 'Genus') %>%
+  psmelt()
