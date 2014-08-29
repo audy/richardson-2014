@@ -1,0 +1,28 @@
+#!/usr/bin/env Rscript
+
+library(ggplot2)
+library(dplyr)
+library(phyloseq)
+library(magrittr)
+
+load('dipp-rf-uniq.RData')
+source('lib/ggplot_theme.R')
+
+dipp %>%
+  sample_data() %>%
+  data.frame() %>%
+  subset(age_at_sampling > 230 & age_at_sampling < 300) %>%
+  group_by(dipp_person) %>%
+  mutate(count=n()) %>%
+  subset(count > 1) %>%
+  data.frame() %>%
+  ggplot(aes(x=age_at_sampling,
+             y=total_reads,
+             color=dipp_person,
+             label=sample_id)) +
+  geom_point() +
+  geom_line(alpha=0.5) +
+  geom_text(color='black') +
+  facet_wrap(~seroconverted) +
+  theme_bw() +
+  theme(legend.position='none')
