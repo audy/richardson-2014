@@ -97,6 +97,9 @@ glm-%.pdf: dipp.Rdata
 		--rank $* \
 		--out-table glm-$*.csv
 
+single-autoantibody.pdf:
+	bin/single-autoantibody
+
 # unused (throw away?)
 boxplot-%.pdf: dipp.rdata
 	bin/boxplots \

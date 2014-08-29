@@ -1,0 +1,68 @@
+#!/usr/bin/env Rscript
+
+library(phyloseq)
+library(ggplot2)
+library(plyr)
+library(magrittr)
+library(ggthemr)
+library(scales)
+
+load('dipp.Rdata')
+
+pdf('single-autoantibody.pdf')
+
+source('lib/misc.R')
+
+glom <- dipp %>%
+  subset_taxa(Species == 'dorei-vulgatus') %>%
+  tax_glom(taxrank = 'Species')
+
+df <- psmelt(glom)
+
+
+# 1-2 autoantibody cases have higher bd early on
+# 3-4 autoantibody cases have higher bd later
+
+df$aa_group <- 'Control'
+df[df$aa_number == 1,]$aa_group <- '1 AA'
+df[df$aa_number >= 2,]$aa_group <- '2+ AA'
+
+print(
+p1 <- ggplot(df,
+       aes(x=age_at_sampling/30,
+           y=Abundance,
+           color=aa_group)) +
+geom_smooth() +
+xlim(100/30, 600/30) +
+xlab('Age at Sampling (months)') +
+ggtitle('Bacteroides dorei') +
+ylab('Relative Abundance') +
+scale_y_continuous(labels=percent)
+)
+
+maxd <- ddply(df, ~dipp_person, function(x) {
+ o <- with(x, order(-Abundance))
+ x <- x[o,][1,]
+ x
+})
+
+maxd %>%
+  subset(seroconverted) %>%
+  wilcox.test(age_at_sampling ~ aa_group, ., alternative='less')
+
+p2 <- ggplot(subset(maxd, seroconverted),
+       aes(x=aa_group,
+           y=age_at_sampling/30)) +
+geom_boxplot() +
+ylab('Age of Peak') +
+ggtitle(bquote(atop('Age of B. dorei peak', atop('p = 0.0192 (Mann-Whitney)')))) 
+
+p4 <- ggplot(subset(maxd, seroconverted),
+       aes(x=aa_group,
+           fill=aa_ICA)) +
+geom_bar(position='dodge')
+
+
+multiplot(p1, p2, cols=2)
+
+dev.off()
