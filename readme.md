@@ -22,19 +22,19 @@ as sample metadata. This file is created using the script `bin/write-rdata`. To
 generate the RData used in this work, run the command `make dipp-rf-uniq.RData`
 from the `R/` directory.
 
-### Figure 1 - LOESS regression of significant OTUs
+### Figure 1 - Time Series Analysis (GLM)
 
 `make glms`
 
-### Figure 2 - Sliding window
+### Figure 2 - Time Series Analysis (sliding window)
 
 `make sliding_window`
 
-### Figure 3 - Phylogenetic tree
+### Figure 3 - 16S, 23S rRNA Phylogenetic tree
 
-This I had to do manually
+I didn't automate this step. Sorry.
 
-### Figure 4 - Prediction figure
+### Figure 4 - Timing of Autoimmunity
 
 `make autoimmunity-timing.pdf`
 
