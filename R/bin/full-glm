@@ -2,22 +2,9 @@
 
 library(optparse)
 
-vars <- c('Gender',
-          'vaginal_delivery',
-          'breast_feeding',
-          'DQA_03',
-          'DQA_05',
-          'DQB_02',
-          'DQB_0201',
-          'DQB_0301',
-          'DQB_0302',
-          'DQB_0303',
-          'DQB_0501',
-          'DQB_0604',
-          'seroconverted')
 
-option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
-                 make_option('--rank', type='character', default='Phylum'),
+option_list <- c(make_option('--input', type='character', default='dipp-predicted.Rdata'),
+                 make_option('--rank', type='character', default='Species'),
                  make_option('--output', type='character', default='models.rdata'),
                  make_option('--bootstrap', default=F, action='store_true'),
                  make_option('--pdf', default='Rplots.pdf'),
@@ -28,7 +15,7 @@ option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
                  make_option('--response', default='seroconverted'),
                  make_option('--keep-1aa', default=F, action='store_true',
                              help='include single autoantibody subjects?'),
-                 make_option('--min-abund', default=0.01)
+                 make_option('--min-abund', default=0.004)
                  )
 
 parser <- OptionParser(option_list = option_list)
@@ -75,17 +62,11 @@ otus$response <- meta[,options$response]
 otus$age <- meta$age_at_sampling
 otus$subject <- meta$dipp_person
 
-# add extra variables
-vars <- vars[vars %in% colnames(meta)]
 
-for (v in vars) otus[,v] <- meta[,v]
+mdat <- melt(otus, c('response', 'age', 'subject'))
 
-mdat <- melt(otus, c('response', 'age', 'subject', vars))
-
-f1 <- as.formula(paste('r ~', paste(paste(vars, ':age', sep=''), collapse='+')))
 f2 <- response ~ r:age
 
-print(f1)
 print(f2)
 
 get_coeff <- function(dat) {
@@ -93,35 +74,25 @@ get_coeff <- function(dat) {
   coef(mod0)
 }
 
-do_fit <- function(dat) {
-  mod0 <- glm(f1, data=dat)
-  dat$r <- residuals(mod0)
-  glm(f2, data=dat, family=binomial(link='logit'))
-}
-
 do_test <- function(dat, i, ...) {
   ss <- dat[i,]
-  m0 <- glm(sample(response) ~ value:age, data=ss)
   m <- glm(response ~ value:age, data=ss)
-  x <- anova(m, m0, test='Chisq')
+  x <- anova(m, test='Chisq')
   return(x[[5]][[2]])
-  #
-  do_fit(ss)[[5]][[2]]
 }
 
 missing <- mdat[!complete.cases(mdat),]
 
-message('Removing', nrow(missing), 'incomplete rows\n')
+message('Removing ', nrow(missing), ' incomplete rows')
 
 mdat <- mdat[complete.cases(mdat),]
 
-do_boostrap <- function(m) {
-    # get sample weights (1/subject frequency)
+do_bootstrap <- function(m) {
+  # get sample weights (1/subject frequency)
   f <- data.frame(table(m$subject))
   colnames(f) <- c('subject', 'frequency')
   m <- merge(m, f, id.x='subject', id.y='subject')
   m$weight <- 1/m$frequency
-
   b <- boot(m, do_test, R=100, sim='balanced', weights=m$weight, parallel='multicore', ncpus=options$cores)
   b$t0
 }
@@ -182,7 +153,7 @@ plot_results <- function(alpha, min=0) {
              fill=status, color=status,
              linetype=status)) +
   geom_smooth(alpha=0.30,size=1) +
-  facet_wrap(~variable, scale='free_y') +
+  facet_wrap(~variable) +
   scale_x_continuous(breaks=seq(0, 48, by=3), limits=c(3, 30)) +
   scale_y_continuous(labels=scientific) +
   ggplot.theme +
