@@ -26,6 +26,8 @@ option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
                  make_option('--absolute', default=F, action='store_true'),
                  make_option('--cores', default=24),
                  make_option('--response', default='seroconverted'),
+                 make_option('--keep-1aa', default=F, action='store_true',
+                             help='include single autoantibody subjects?'),
                  make_option('--min-abund', default=0.01)
                  )
 
@@ -42,7 +44,12 @@ library(boot)
 library(scales)
 
 load(options$input)
-cat('Agglomerating... get some coffee\n')
+
+if (!options$`keep-1aa` == T) {
+    message("removing single autoantibody subjects")
+    dipp <- subset_samples(dipp, aa_number != 1)
+}
+
 dipp <- tax_glom(dipp, taxrank=options$rank)
 
 if (options$subset != 'none') {
