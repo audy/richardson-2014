@@ -14,7 +14,7 @@ endif
 
 # miseq data
 OTU_TABLE_MISEQ?='../data/otu-tables/miseq-august.assembled-against-centroids.csv'
-TAX_TABLE_MISEQ?='../data/taxonomy-tables/greengenes-centroids-taxonomies-merged.csv'
+TAXONOMIES_MISEQ?='../data/taxonomy-tables/greengenes-centroids-taxonomies-merged.csv'
 
 SUBJECT_DATA?='../data/dipp-subjects.csv'
 SAMPLE_DATA?='../data/dipp-stool-samples.csv'
@@ -77,7 +77,7 @@ dipp-miseq.Rdata:
 		--subject-data $(SUBJECT_DATA) \
 		--sample-data $(SAMPLE_DATA) \
 		--sequencing-data $(SEQUENCING_DATA) \
-		--taxonomies $(TAXONOMIES) \
+		--taxonomies $(TAXONOMIES_MISEQ) \
 		--proportion
 
 
