@@ -2,11 +2,11 @@
 
 library(optparse)
 
-option_list <- c(make_option('--rdata', default='dipp-rf-uniq.RData'),
-                 make_option('--qpcr-data', default='../data/bacteroides-qPCR-25.Nov.2013.csv'),
-                 make_option('--target', default='Bacteroides'),
-                 make_option('--rank', default='Genus'),
-                 make_option('--output', default='predicted-bacteroides-copies.csv')
+option_list <- c(make_option('--rdata', default='dipp-predicted.Rdata'),
+                 make_option('--qpcr-data', default='../data/qpcr-data/bacteroides-qPCR-25.Nov.2013.csv'),
+                 make_option('--target', default='bact'),
+                 make_option('--rank', default='Species'),
+                 make_option('--output', default='predicted-bacteroides-bact-copies.csv')
                  )
 
 
@@ -15,6 +15,8 @@ options <- parse_args(parser)
 
 library(phyloseq)
 library(ggplot2)
+library(magrittr)
+library(plyr)
 
 #
 # Load OTU Abundance Data
@@ -22,23 +24,13 @@ library(ggplot2)
 
 load(options$rdata)
 
-dorei <- subset_taxa(dipp, Species == 'dorei-vulgatus')
-dorei <- tax_glom(dorei, taxrank='Species')
-dorei <- data.frame(otu_table(dorei))
-colnames(dorei) <- c('dorei-vulgatus')
+bact <- dipp %>%
+  subset_taxa(Genus == 'Bacteroides') %>%
+  tax_glom(taxrank = 'Genus') %>%
+  psmelt()
 
-ss <- subset_taxa(dipp, Genus == "Bacteroides")
-glom <- tax_glom(ss, taxrank=options$rank)
-
-otus <- data.frame(otu_table(glom), check.names=F)
-meta <- data.frame(sample_data(glom))
-
-otus$sample_id <- meta$sample_id
-
-oldname <- colnames(otus)[1]
-colnames(otus)[1] <- 'relative_abundance'
-
-otus$relative_abundance <- round(100000*otus$relative_abundance)
+# make an integer
+bact$Reads <- round(100000*bact$Abundance)
 
 
 #
@@ -47,26 +39,36 @@ otus$relative_abundance <- round(100000*otus$relative_abundance)
 
 qpcr <- read.csv(options$`qpcr-data`)
 
+qpcr$copies <- as.numeric(as.character(qpcr$copies))
+qpcr <- qpcr[complete.cases(qpcr),]
+
+avg <- qpcr %>%
+  ddply(~sample, function(x)
+        c(median=median(x$copies), sd=sd(x$copies), reps=nrow(x))) %>%
+  subset(reps == 3)
+
+
+
 #
 # Regression
 #
 
-dat <- merge(otus, qpcr, by.x='sample_id', by.y='sample')
+dat <- merge(bact, avg, by.x='sample_id', by.y='sample')
 
-dat$copies <- as.numeric(as.character(dat$copies))
-dat$copies <- round(100000*dat$copies)
-dat <- dat[complete.cases(dat),]
+dat$copies <- round(100000*dat$median)
+
+dat <- dat[complete.cases(dat$copies),]
 
 ggplot(dat,
        aes(x=copies)) +
 geom_density()
 
 ggplot(dat,
-       aes(x=relative_abundance,
+       aes(x=Reads,
            y=copies)) +
 geom_point()
 
-mod <- glm(copies ~ relative_abundance, data=dat)
+mod <- glm(copies ~ Abundance, data=dat)
 
 summary(mod)
 
@@ -78,34 +80,34 @@ ggplot(dat,
 
 otus$predicted_copies <- predict(mod, newdata=otus, type="response")
 meta[meta$predicted_copies< 0,]$predicted_copies<- 0
-otus$predicted_dorei <- otus$predicted_copies * dorei[,1]
+otus$predicted_bact <- otus$predicted_copies * bact[,1]
 
 
 meta$predicted_copies <- otus[rownames(meta),]$predicted_copies
-meta$predicted_dorei <- otus[rownames(meta),]$predicted_dorei
+meta$predicted_bact <- otus[rownames(meta),]$predicted_bact
 
 
 ggplot(meta,
        aes(x=age_at_sampling,
-           y=predicted_dorei,
+           y=predicted_bact,
            color=seroconverted)) +
 geom_smooth() +
 xlim(100, 600) +
-ylab('predicted Bacteroides * Bacteroides dorei-vulgatus')
+ylab('predicted Bacteroides * Bacteroides bact-vulgatus')
 
 new_table <- data.frame(otus[,1])
 rownames(new_table) <- rownames(otus)
 colnames(new_table)[1] <- oldname
 
-dorei <- data.frame(meta$predicted_dorei)
+bact <- data.frame(meta$predicted_bact)
 bacteroides <- data.frame(meta$predicted_copies)
-rownames(dorei) <- rownames(meta)
+rownames(bact) <- rownames(meta)
 rownames(bacteroides) <- rownames(meta)
 
-colnames(dorei) <- c('589277')
+colnames(bact) <- c('589277')
 colnames(bacteroides) <- c('71331')
 
-write.csv(dorei, file='dorei.csv')
+write.csv(bact, file='bact.csv')
 write.csv(bacteroides, file='bacteroides.csv')
 
 write.csv(new_table, file=options$output)
