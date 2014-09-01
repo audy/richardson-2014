@@ -2,10 +2,10 @@
 
 library(optparse)
 
-option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.Rdata'),
+option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
                  make_option('--output', type='character', default='Rplots.pdf'),
                  make_option('--width', type='numeric', default=201),
-                 make_option('--top', type='numeric', default=1),
+                 make_option('--top', type='numeric', default=4),
                  make_option('--rank', default='Species'),
                  make_option('--fdr', default='BH'),
                  make_option('--by', default=10),
@@ -63,7 +63,7 @@ subsets <- generate_subsets(phy, start_times, options$width)
 test_glm <- function(dat, i, ...) {
   ss <- dat[i,]
   m <- glm(seroconverted ~ value, data=ss, family=binomial(link='logit'))
-  p.value <- anova(m1, test='Chisq')[[5]][[2]]
+  p.value <- anova(m, test='Chisq')[[5]][[2]]
   return(p.value)
 }
 
@@ -76,7 +76,8 @@ test_roc <- function(dat, i, ...) {
 
 test_mw <- function(dat, i, ...) {
   ss <- dat[i,]
-  wilcox.test(value ~ seroconverted, dat=ss, exact=F)$p.value
+  # wilcox test takes response on the right for some reason...
+  wilcox.test(value ~ seroconverted, dat=dat, exact=F)$p.value
 }
 
 get_df <- function(s) {
@@ -97,12 +98,15 @@ subsets <- lapply(subsets, get_df)
 
 # get rid of "crappy" subsets
 keep <- lapply(subsets, function(x) {
-  min(ddply(x, ~ seroconverted, nrow)$V1) > 20
+  sum(x$seroconverted) > 20 && sum(!x$seroconverted) > 20
 })
 
 subsets <- subsets[unlist(keep)]
 
-sliding.avg <- lapply(subsets, function(s) {
+sliding.avg <- lapply(1:length(subsets), function(i) {
+  message('testing window ', i)
+  mdat <- subsets[[i]]
+
   pvals <- ddply(mdat, ~variable, function(x) {
       # run statistical tests
       p.glm <- boot(x, test_glm, R=100)$t0
@@ -111,7 +115,7 @@ sliding.avg <- lapply(subsets, function(s) {
       # get medians, and standard error
       stat.med <- ddply(x, ~ seroconverted, function(y) median(y$value))
       stat.se <- ddply(x, ~ seroconverted, function(y) se(y$value))
-      c(p.glm=p.glm, auc=auc, p.mw=p.mw, age=age)
+      c(p.glm=p.glm, auc=auc, p.mw=p.mw)
   })
 
   averaged <- ddply(mdat , ~variable+seroconverted, function(x) {
@@ -123,10 +127,10 @@ sliding.avg <- lapply(subsets, function(s) {
   # get median, confidence intervals and add pvalue in one table
   merged <- merge(averaged, pvals, by.x='variable', by.y='variable', all=T)
 
-  merged$width <- max(otus$age_at_sampling) - min(otus$age_at_sampling)
-  merged$n <- nrow(otus)
-  merged$n.cases <- nrow(otus[otus$seroconverted,])
-  merged$n.controls <- nrow(otus[!otus$seroconverted,])
+  merged$width <- max(merged$age_at_sampling) - min(merged$age_at_sampling)
+  merged$n <- nrow(merged)
+  merged$n.cases <- nrow(subset(merged, seroconverted))
+  merged$n.controls <- nrow(subset(merged, !seroconverted))
   merged
 })
 
@@ -137,13 +141,13 @@ limits <- aes(ymin = median - err, ymax = median + err)
 
 combined$status <- factor(combined$seroconverted)
 
-min(combined$p.adjusted)
+min(combined$p.mw)
 
 pdf(options$output)
 
-# p.adjusted distribution
+# p.mw distribution
 ggplot(combined,
-       aes(x=p.adjusted,
+       aes(x=p.mw,
            color=variable)) +
 geom_density() +
 geom_vline(x=0.05)
@@ -174,17 +178,17 @@ ggtitle(paste(median(combined$w), se(combined$w)))
 combined$significance <- 'insignificant'
 sig.colours <- c(insignificant="#FFFFFF")
 
-if (min(combined$p.adjusted) < 0.05) {
+if (min(combined$p.mw) < 0.05) {
   sig.colours <- c(sig.colours, '0.05'="#218457")
-  combined[combined$p.adjusted < 0.05,]$significance <- '0.05'
+  combined[combined$p.mw < 0.05,]$significance <- '0.05'
 }
-if (min(combined$p.adjusted) < 0.01) {
+if (min(combined$p.mw) < 0.01) {
   sig.colours <- c(sig.colours, '0.01'="#FF0000") # throw a party
-  combined[combined$p.adjusted < 0.01,]$significance <- '0.01'
+  combined[combined$p.mw < 0.01,]$significance <- '0.01'
 }
-if (min(combined$p.adjusted) < 0.001) {
+if (min(combined$p.mw) < 0.001) {
   sig.colours <- c(sig.colours, '0.001'="#00FF00") # throw a party
-  combined[combined$p.adjusted < 0.001,]$significance <- '0.001'
+  combined[combined$p.mw < 0.001,]$significance <- '0.001'
 }
 
 sig.scale <- scale_colour_manual(values=sig.colours)
@@ -205,7 +209,7 @@ if (options$absolute) {
 #
 
 p <- ggplot(combined,
-         aes(x=age_at_sampling,
+         aes(x=age_at_sampling/30,
              y=abundance,
              fill=seroconverted)) +
   geom_ribbon(aes(ymin = abundance - abundance.se,
@@ -213,19 +217,16 @@ p <- ggplot(combined,
               alpha=0.5) +
   facet_wrap(~variable,
              scale='free_y') +
-  xlim(100, 800) +
   geom_rug(aes(color=significance), sides='b') +
-  ylab +
-  yscale +
-  ggplot.theme +
-  ggplot.pal.scale +
-  sig.scale +
-  xlab('Subject Age (days)') +
-  geom_vline(x=479, color='purple', alpha=0.75) +
-  geom_vline(x=479-68, linetype='dashed', color='purple', alpha=0.75) +
-  geom_vline(x=479+68, linetype='dashed', color='purple', alpha=0.75) +
+  xlab('Age at Sampling (Months)') +
+  geom_vline(x=479 /30, color='purple', alpha=0.75) +
+  geom_vline(x=(479-68)/30, linetype='dashed', color='purple', alpha=0.75) +
+  geom_vline(x=(479+68)/30, linetype='dashed', color='purple', alpha=0.75) +
   ggtitle(options$rank) +
-  theme(strip.text=element_text(face='italic'))
+  scale_x_continuous(breaks=seq(0, 48, by=3), limits=c(3, 30)) +
+  theme(strip.text=element_text(face='italic')) +
+  ylab + yscale + ggplot.theme + ggplot.pal.scale + sig.scale
+
 
 if (options$absolute & options$rank == 'Genus') {
   p <- p + coord_cartesian(ylim=c(0, 1.5e11))
@@ -234,12 +235,5 @@ if (options$absolute & options$rank == 'Genus') {
 }
 
 p
-
-ggplot(combined,
-       aes(x=age_at_sampling,
-           y=abundance,
-           color=significance)) +
-geom_point() +
-facet_wrap(~variable, scale='free_y')
 
 dev.off()
