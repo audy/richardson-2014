@@ -16,7 +16,7 @@ vars <- c('Gender',
           'DQB_0604',
           'seroconverted')
 
-option_list <- c(make_option('--input', type='character', default='dipp-rf-uniq.RData'),
+option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
                  make_option('--rank', type='character', default='Phylum'),
                  make_option('--output', type='character', default='models.rdata'),
                  make_option('--bootstrap', default=F, action='store_true'),
