@@ -4,7 +4,11 @@
 # INPUT FILE LOCATIONS
 #
 
+RDATA='dipp.Rdata'
+
 OTU_TABLE?='../data/otu-tables/dipp-hiseq-samples.gg97.minlen70.50r10s.csv'
+
+BOOTSTRAPS?='100'
 
 ifeq ($(TAXCOLLECTOR), 'true')
   TAXONOMIES?='../data/taxonomy-tables/greengenes-with-taxcollector-taxonomy.csv'
@@ -126,14 +130,16 @@ boxplot-%.pdf: dipp.rdata
 		--input $<
 
 # Figure 2 a, b, c
-sliding-window-%.pdf: dipp.rdata
+sliding-window-%.pdf: dipp.Rdata
 	bin/sliding-window-smooth \
 		--rank $* \
 		--output $@ \
 		--input $< \
 		--width $(WIDTH) \
 		--top $(TOP) \
-		--by $(BY)
+		--by $(BY) \
+		--bootstraps $(BOOTSTRAPS) \
+		--table-out sliding-window-$*.csv
 
 # Figure 3b
 sliding-window-qpcr-bacteroides.pdf: dipp-qpcr-bacteroides.rdata
@@ -146,11 +152,12 @@ sliding-window-qpcr-bacteroides.pdf: dipp-qpcr-bacteroides.rdata
 		--width $(WIDTH)
 
 # Figure 3c
-sliding-window-qpcr-dorei.pdf: dipp-qpcr-dorei.rdata
+sliding-window-qpcr-dorei.pdf: dipp-qpcr-dorei.Rdata
 	bin/sliding-window-smooth \
 		--input $< \
 		--output $@ \
 		--rank Species \
+		--bootstraps $(BOOTSTRAPS) \
 		--by $(BY) \
 		--absolute \
 		--width $(WIDTH)
