@@ -9,7 +9,8 @@ option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
                  make_option('--rank', default='Species'),
                  make_option('--fdr', default='BH'),
                  make_option('--by', default=10),
-                 make_option('--absolute', type='logical', action='store_true', default=FALSE)
+                 make_option('--absolute', type='logical', action='store_true', default=FALSE),
+                 make_option('--table-out', default='sliding-window.csv')
                 )
 
 parser <- OptionParser(option_list = option_list)
@@ -194,6 +195,8 @@ if (min(combined$p.mw) < 0.001) {
 sig.scale <- scale_colour_manual(values=sig.colours)
 
 combined$significance <- as.factor(combined$significance)
+
+write.csv(combined, file=options$`table-out`)
 
 
 if (options$absolute) {
