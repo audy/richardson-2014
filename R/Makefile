@@ -4,7 +4,7 @@
 # INPUT FILE LOCATIONS
 #
 
-OTU_TABLE='../data/otu-tables/dipp-hiseq-samples.gg97.minlen70.50r10s.csv'
+OTU_TABLE?='../data/otu-tables/dipp-hiseq-samples.gg97.minlen70.50r10s.csv'
 
 ifeq ($(TAXCOLLECTOR), 'true')
   TAXONOMIES?='../data/taxonomy-tables/greengenes-with-taxcollector-taxonomy.csv'
