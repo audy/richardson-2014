@@ -445,6 +445,16 @@ Source: CRAN
 Version: 1.3-0
 Hash: 8b1341dfd547c90ed4b3365d5aa46a7b
 
+Package: rmarkdown
+Source: github
+Version: 0.2.67
+Hash: 7da053d18faa21254cc814a1deafe4ebba0df7d3
+Requires: caTools, htmltools, knitr, yaml
+GithubRepo: rmarkdown
+GithubUsername: rstudio
+GithubRef: master
+GithubSha1: 7da053d18faa21254cc814a1deafe4ebba0df7d3
+
 Package: RSQLite
 Source: CRAN
 Version: 0.11.4
@@ -485,6 +495,15 @@ Version: 2.0-10
 Hash: e8d0d575c0cbce6da2c8777ac291e5aa
 Requires: lattice, permute
 
+Package: vimcom
+Source: github
+Version: 1.0-0
+Hash: 70fec5c4c5d4f0fe70534650f40a4d195a3f8509
+GithubRepo: VimCom
+GithubUsername: jalvesaq
+GithubRef: master
+GithubSha1: 70fec5c4c5d4f0fe70534650f40a4d195a3f8509
+
 Package: whisker
 Source: CRAN
 Version: 0.3-2
@@ -505,6 +524,11 @@ Source: Bioconductor
 Version: 0.4.0
 Hash: 7083e3d54069fdf11a0ae1f4e6b3d0c7
 Requires: BiocGenerics, IRanges
+
+Package: yaml
+Source: CRAN
+Version: 2.1.13
+Hash: e5d041c001f6d641fd009c1f6ef7d831
 
 Package: zlibbioc
 Source: Bioconductor
