@@ -186,7 +186,3 @@ rank_tables/%.csv: rank_tables dipp.rdata
 	    --rank $* \
 	    --output $@ \
 	    --input dipp.rdata
-
-clean:
-	rm -f *.rdata
-	rm -f *.pdf
