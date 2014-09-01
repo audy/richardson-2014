@@ -53,6 +53,19 @@ tables: rank_tables/Phylum.csv rank_tables/Genus.csv rank_tables/Species.csv
 default: sliding_window glms boxplots mw-all
 	@echo 'done!'
 
+dipp-predicted.Rdata:
+	bin/write-rdata \
+		--unique \
+		--output $@ \
+		--normalize 'none' \
+		--site Turku \
+		--otutable '../data/otu-tables/predicted-dorei-vulgatus.csv' \
+		--subject-data $(SUBJECT_DATA) \
+		--sample-data $(SAMPLE_DATA) \
+		--sequencing-data $(SEQUENCING_DATA) \
+		--taxonomies  '../data/taxonomy-tables/greengenes-taxonomies-annotated-bacteroides.csv'
+
+
 # core data object
 # generates an rdata file containing a phyloseq dataset w/ main
 # experimental data (subject data, sample data, otu table, taxonomies)
