@@ -115,18 +115,22 @@ cat('Removing', nrow(missing), 'incomplete rows\n')
 
 mdat <- mdat[complete.cases(mdat),]
 
+do_boostrap <- function(m) {
+    # get sample weights (1/subject frequency)
+  f <- data.frame(table(m$subject))
+  colnames(f) <- c('subject', 'frequency')
+  m <- merge(m, f, id.x='subject', id.y='subject')
+  m$weight <- 1/m$frequency
+
+  b <- boot(m, do_test, R=100, sim='balanced', weights=m$weight, parallel='multicore', ncpus=options$cores)
+  b$t0
+}
+
+# run tests!
 glms <- ddply(mdat, ~variable, function(m) {
   cat('variable:', m$variable[1], '\n')
   if (options$bootstrap) {
-    # get sample weights (1/subject frequency)
-    f <- data.frame(table(m$subject))
-    colnames(f) <- c('subject', 'frequency')
-    m <- merge(m, f, id.x='subject', id.y='subject')
-    m$weight <- 1/m$frequency
-
-    b <- boot(m, do_test, R=100, sim='balanced', weights=m$weight, parallel='multicore', ncpus=options$cores)
-#    print(boot.ci(b)) # make sure we did enough bootstraps
-    b$t0
+    do_bootstrap(m)
   } else {
     do_test(m, rownames(m))
   }
