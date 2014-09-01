@@ -3,9 +3,11 @@
 library(optparse)
 
 option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
+
                  make_option('--output', type='character', default='Rplots.pdf'),
                  make_option('--width', type='numeric', default=201),
                  make_option('--top', type='numeric', default=4),
+                 make_option('--bootstraps', type='numeric', default=1),
                  make_option('--rank', default='Species'),
                  make_option('--fdr', default='BH'),
                  make_option('--by', default=10),
@@ -108,11 +110,18 @@ sliding.avg <- lapply(1:length(subsets), function(i) {
   message('testing window ', i)
   mdat <- subsets[[i]]
 
-  pvals <- ddply(mdat, ~variable, function(x) {
+  # downsample
+  ds <- ddply(mdat, ~variable + dipp_person, function(x) {
+    c(seroconverted=x[1,]$seroconverted,
+      value=median(x$value),
+      age_at_sampling=median(x$age_at_sampling))
+  })
+
+  pvals <- ddply(ds, ~variable, function(x) {
       # run statistical tests
-      p.glm <- boot(x, test_glm, R=100)$t0
-      auc <- boot(x, test_roc, R=100)$t0
-      p.mw <- boot(x, test_mw, R=100)$t0
+      p.glm <- boot(x, test_glm, R=options$bootstraps)$t0
+      auc <- boot(x, test_roc, R=options$bootstraps)$t0
+      p.mw <- boot(x, test_mw, R=options$bootstraps)$t0
       # get medians, and standard error
       stat.med <- ddply(x, ~ seroconverted, function(y) median(y$value))
       stat.se <- ddply(x, ~ seroconverted, function(y) se(y$value))
