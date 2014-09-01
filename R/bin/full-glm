@@ -34,7 +34,6 @@ option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
 parser <- OptionParser(option_list = option_list)
 options <- parse_args(parser)
 
-pdf(options$pdf)
 
 library(phyloseq)
 library(plyr)
@@ -202,12 +201,15 @@ plot_results <- function(alpha, min=0) {
   print(p)
 }
 
+pdf(options$pdf)
+
 for (alpha in c(1, 0.05, 0.01, 0.001)) {
   tryCatch({
     plot_results(alpha, min=options$`min-abund`)
   }, error = function(e) { warning(e) })
 }
 
+dev.off()
+
 write.csv(glms, file=options$`out-table`)
 
-dev.off()
