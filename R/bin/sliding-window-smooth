@@ -101,7 +101,7 @@ subsets <- lapply(subsets, get_df)
 
 # get rid of "crappy" subsets
 keep <- lapply(subsets, function(x) {
-  sum(x$seroconverted) > 20 && sum(!x$seroconverted) > 20
+  sum(x$seroconverted) > 20 & sum(!x$seroconverted) > 20
 })
 
 subsets <- subsets[unlist(keep)]
