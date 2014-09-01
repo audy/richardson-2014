@@ -128,6 +128,7 @@ glm-%.pdf: dipp.Rdata
 		--output "$@".csv \
 		--pdf $@ \
 		--rank $* \
+		--bootstrap \
 		--out-table glm-$*.csv
 
 single-autoantibody.pdf:
