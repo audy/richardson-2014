@@ -50,6 +50,7 @@ if (!options$`keep-1aa` == T) {
     dipp <- subset_samples(dipp, aa_number != 1)
 }
 
+message('Agglomerating... get some coffee\n')
 dipp <- tax_glom(dipp, taxrank=options$rank)
 
 if (options$subset != 'none') {
@@ -111,7 +112,7 @@ do_test <- function(dat, i, ...) {
 
 missing <- mdat[!complete.cases(mdat),]
 
-cat('Removing', nrow(missing), 'incomplete rows\n')
+message('Removing', nrow(missing), 'incomplete rows\n')
 
 mdat <- mdat[complete.cases(mdat),]
 
@@ -128,7 +129,7 @@ do_boostrap <- function(m) {
 
 # run tests!
 glms <- ddply(mdat, ~variable, function(m) {
-  cat('variable:', m$variable[1], '\n')
+  message('testing variable: ', m$variable[1])
   if (options$bootstrap) {
     do_bootstrap(m)
   } else {
