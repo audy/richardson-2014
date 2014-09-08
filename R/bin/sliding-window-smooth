@@ -2,12 +2,12 @@
 
 library(optparse)
 
-option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
 
+option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
                  make_option('--output', type='character', default='Rplots.pdf'),
                  make_option('--width', type='numeric', default=201),
-                 make_option('--top', type='numeric', default=4),
-                 make_option('--bootstraps', type='numeric', default=1),
+                 make_option('--top', type='numeric', default=1),
+                 make_option('--bootstraps', type='numeric', default=100),
                  make_option('--rank', default='Species'),
                  make_option('--fdr', default='BH'),
                  make_option('--by', default=10),
