@@ -15,7 +15,7 @@ option_list <- c(make_option('--input', type='character', default='dipp-predicte
                  make_option('--response', default='seroconverted'),
                  make_option('--keep-1aa', default=F, action='store_true',
                              help='include single autoantibody subjects?'),
-                 make_option('--min-abund', default=0.004)
+                 make_option('--min-abund', default=0.01)
                  )
 
 parser <- OptionParser(option_list = option_list)
