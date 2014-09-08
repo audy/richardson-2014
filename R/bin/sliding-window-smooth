@@ -193,11 +193,11 @@ combined$significance <- 'insignificant'
 sig.colours <- c(insignificant="#FFFFFF")
 
 if (min(combined$p.mw) < 0.05) {
-  sig.colours <- c(sig.colours, '0.05'="#218457")
+  sig.colours <- c(sig.colours, '0.05'="#0000FF")
   combined[combined$p.mw < 0.05,]$significance <- '0.05'
 }
 if (min(combined$p.mw) < 0.01) {
-  sig.colours <- c(sig.colours, '0.01'="#FF0000") # throw a party
+  sig.colours <- c(sig.colours, '0.01'="#00FF00") # throw a party
   combined[combined$p.mw < 0.01,]$significance <- '0.01'
 }
 if (min(combined$p.mw) < 0.001) {
@@ -214,9 +214,9 @@ write.csv(combined, file=options$`table-out`)
 
 if (options$absolute) {
   yscale <- scale_y_continuous(breaks=pretty_breaks(50))
-  ylab <- ylab('Predicted Copy Number')
+  ylab <- ylab('Est. Cells per Gram of Stool (billions)')
 } else {
-  yscale <- scale_y_continuous(labels=percent)
+  yscale <- scale_y_continuous(labels=percent, breaks=seq(0, 100, by=5))
   ylab <- ylab('Relative Abundance')
 }
 
@@ -226,7 +226,6 @@ if (options$absolute) {
 
 p <- ggplot(combined,
          aes(x=age_at_sampling/30,
-             y=abundance,
              fill=seroconverted)) +
   geom_ribbon(aes(ymin = abundance - abundance.se,
                   ymax = abundance + abundance.se),
@@ -239,15 +238,16 @@ p <- ggplot(combined,
   geom_vline(x=(479-68)/30, linetype='dashed', color='purple', alpha=0.75) +
   geom_vline(x=(479+68)/30, linetype='dashed', color='purple', alpha=0.75) +
   ggtitle(options$rank) +
-  scale_x_continuous(breaks=seq(0, 48, by=3), limits=c(3, 30)) +
+  scale_x_continuous(breaks=seq(0, 48, by=3), limits=c(3, 24)) +
+  scale_y_continuous(labels=percent) +
   theme(strip.text=element_text(face='italic')) +
-  ylab + yscale + ggplot.theme + ggplot.pal.scale + sig.scale
+  ylab + ggplot.theme + ggplot.pal.scale + sig.scale
 
 
 if (options$absolute & options$rank == 'Genus') {
   p <- p + coord_cartesian(ylim=c(0, 1.5e11))
 } else if (options$absolute & options$rank == 'Species') {
-  p <- p + coord_cartesian(ylim=c(0, 5e10))
+  p <- p + coord_cartesian(breaks=seq(0, 5e9, by=1e9))
 }
 
 p
