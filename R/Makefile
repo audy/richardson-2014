@@ -67,6 +67,16 @@ dipp-predicted.Rdata:
 		--sequencing-data $(SEQUENCING_DATA) \
 		--taxonomies  '../data/taxonomy-tables/greengenes-taxonomies-annotated-bacteroides.csv'
 
+dipp-raw.Rdata:
+	bin/write-rdata \
+	    --output $@ \
+	    --normalize 'none' \
+	    --site $(SITE) \
+	    --otutable $(OTU_TABLE) \
+	    --subject-data $(SUBJECT_DATA) \
+	    --sample-data $(SAMPLE_DATA) \
+	    --sequencing-data $(SEQUENCING_DATA) \
+	    --taxonomies '../data/taxonomy-tables/greengenes-taxonomies.csv'
 
 # core data object
 # generates an rdata file containing a phyloseq dataset w/ main
