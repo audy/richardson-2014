@@ -83,8 +83,9 @@ do_bootstrap <- function(m, n_bootstraps=10) {
   b$t0
 }
 
+
 # run tests!
-glms <- ddply(mdat, ~variable, function(m) {
+glms <- ddply(dat, ~variable, function(m) {
   message('testing variable: ', m$variable[1])
   do_bootstrap(m, n_bootstraps=options$bootstraps)
 })
@@ -122,16 +123,16 @@ plot_results <- function(alpha, min=0) {
   cat('alpha =', alpha, '\n')
   cat('min =', min, '\n')
   significant <- subset(glms, p.adjust < alpha)
-  mdat.s <- subset(mdat, variable %in% significant$variable)
-  cat(nrow(mdat.s), '\n')
-  top <- ddply(mdat.s, ~variable, function(x) median(x$value) > min)
+  dat.s <- subset(dat, variable %in% significant$variable)
+  cat(nrow(dat.s), '\n')
+  top <- ddply(dat.s, ~variable, function(x) median(x$Abundance) > min)
   top <- top[top$V1,]
-  mdat.s <- subset(mdat.s, variable %in% top$variable)
-  mdat.s$variable <- factor(mdat.s$variable, levels=unique(mdat.s[with(mdat.s, order(-value)),]$variable))
-  cat(nrow(mdat.s), '\n')
-  p<-ggplot(mdat.s,
-         aes(x=age/30,
-             y=value,
+  dat.s <- subset(dat.s, variable %in% top$variable)
+  dat.s$variable <- factor(dat.s$variable, levels=unique(dat.s[with(dat.s, order(-Abundance)),]$variable))
+  cat(nrow(dat.s), '\n')
+  p<-ggplot(dat.s,
+         aes(x=age_at_sampling/30,
+             y=Abundance,
              fill=status, color=status,
              linetype=status)) +
   geom_smooth(alpha=0.30,size=1) +
