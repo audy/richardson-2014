@@ -53,6 +53,13 @@ start_times <- start_times[seq(1, length(start_times), options$by)]
 
 phy <- top
 
+ggplot(psmelt(phy),
+       aes(x=age_at_sampling,
+           y=Abundance,
+           fill=seroconverted)) +
+geom_smooth() +
+xlim(100, 600)
+
 source('lib/se.R')
 
 cat("Looking at top",
