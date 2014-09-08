@@ -6,10 +6,10 @@ library(optparse)
 option_list <- c(make_option('--input', type='character', default='dipp-predicted.Rdata'),
                  make_option('--rank', type='character', default='Species'),
                  make_option('--output', type='character', default='models.rdata'),
-                 make_option('--bootstrap', default=F, action='store_true'),
                  make_option('--pdf', default='Rplots.pdf'),
                  make_option('--out-table', default='glms.csv'),
                  make_option('--subset', default='none'),
+                 make_option('--bootstraps', default=0),
                  make_option('--absolute', default=F, action='store_true'),
                  make_option('--response', default='seroconverted'),
                  make_option('--keep-1aa', default=F, action='store_true',
@@ -36,60 +36,46 @@ if (!options$`keep-1aa` == T) {
     dipp <- subset_samples(dipp, aa_number != 1)
 }
 
-message('Agglomerating... get some coffee\n')
-dipp <- tax_glom(dipp, taxrank=options$rank)
-
 if (options$subset != 'none') {
   form <- parse(text=options$subset)
   dipp <- subset_samples(dipp, eval(form))
 }
 
-otus <- data.frame(otu_table(dipp), check.names=F)
+message('Agglomerating... get some coffee\n')
+dipp <- tax_glom(dipp, taxrank=options$rank)
 
-taxa_names <- data.frame(tax_table(dipp))
+dipp <- subset_samples(dipp, age_at_sampling < 600)
 
-if (options$rank == 'Species') {
-  taxa_names <- paste(taxa_names$Genus, taxa_names$Species)
-} else {
-  taxa_names <- taxa_names[,options$rank]
-}
+dat <- psmelt(dipp)
 
-colnames(otus) <- taxa_names
-
-meta <- data.frame(sample_data(dipp))
-
-otus$response <- meta[,options$response]
-otus$age <- meta$age_at_sampling
-otus$subject <- meta$dipp_person
-
-
-mdat <- melt(otus, c('response', 'age', 'subject'))
-
-f2 <- response ~ r:age
-
-print(f2)
+dat$response <- dat[,options$response]
+dat$variable <- dat[,options$rank]
 
 get_coeff <- function(dat) {
   mod0 <- glm(f1, data=dat)
   coef(mod0)
 }
 
+f1 <- Abundance ~ Gender + vaginal_delivery + Breast_feeding_any
+f2 <-  seroconverted ~ residuals:age_at_sampling
+
+print(f1)
+print(f2)
+
 do_test <- function(dat, i, ...) {
   ss <- dat[i,]
-  m <- glm(response ~ value:age, data=ss)
+  m0 <- glm(f1, data=ss)
+  print(anova(m0, test='F'))
+  ss$residuals <- residuals(m0)
+  m <- glm(f2, data=ss, family=binomial(link='logit'))
   x <- anova(m, test='Chisq')
+  print(x)
   return(x[[5]][[2]])
 }
 
-missing <- mdat[!complete.cases(mdat),]
-
-message('Removing ', nrow(missing), ' incomplete rows')
-
-mdat <- mdat[complete.cases(mdat),]
-
-do_bootstrap <- function(m) {
+do_bootstrap <- function(m, n_bootstraps=10) {
   # get sample weights (1/subject frequency)
-  f <- data.frame(table(m$subject))
+  f <- data.frame(table(m$dipp_person))
   colnames(f) <- c('subject', 'frequency')
   m <- merge(m, f, id.x='subject', id.y='subject')
   m$weight <- 1/m$frequency
@@ -101,11 +87,7 @@ do_bootstrap <- function(m) {
 # run tests!
 glms <- ddply(mdat, ~variable, function(m) {
   message('testing variable: ', m$variable[1])
-  if (options$bootstrap) {
-    do_bootstrap(m)
-  } else {
-    do_test(m, rownames(m))
-  }
+  do_bootstrap(m, n_bootstraps=options$bootstraps)
 })
 
 glms <- glms[complete.cases(glms),]
