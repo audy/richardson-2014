@@ -37,7 +37,8 @@ fix_subject_columns <- function(df) {
         age_IA2A <- as.numeric(date_IA2A - DOB)
         age_ICA <- as.numeric(date_ICA - DOB)
         age_T1D <- as.numeric(date_T1D - DOB)
-    })
+        vaginal_delivery <- (Mode_of_Delivery %in ('vaginal', 'suction-cup', 'breech delivery'))
+    }
     return(df)
 }
 
