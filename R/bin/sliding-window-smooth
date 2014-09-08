@@ -133,22 +133,18 @@ sliding.avg <- lapply(1:length(subsets), function(i) {
       # get medians, and standard error
       stat.med <- ddply(x, ~ seroconverted, function(y) median(y$value))
       stat.se <- ddply(x, ~ seroconverted, function(y) se(y$value))
-      c(p.glm=p.glm, auc=auc, p.mw=p.mw)
+      n.cases <- sum(x$seroconverted)
+      n.controls <- sum(!x$seroconverted)
+      width <- max(x$age_at_sampling) - min(x$age_at_sampling)
+      c(p.glm=p.glm, auc=auc, p.mw=p.mw, n.cases=n.cases,n.controls=n.controls, width=width, n=n.cases+n.controls)
   })
-
   averaged <- ddply(mdat , ~variable+seroconverted, function(x) {
      c(abundance=median(x$value),
        abundance.se=se(x$value),
        age_at_sampling=median(x$age_at_sampling))
   })
-
   # get median, confidence intervals and add pvalue in one table
   merged <- merge(averaged, pvals, by.x='variable', by.y='variable', all=T)
-
-  merged$width <- max(merged$age_at_sampling) - min(merged$age_at_sampling)
-  merged$n <- nrow(merged)
-  merged$n.cases <- nrow(subset(merged, seroconverted))
-  merged$n.controls <- nrow(subset(merged, !seroconverted))
   merged
 })
 
