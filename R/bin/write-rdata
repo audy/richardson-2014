@@ -21,7 +21,7 @@ option_list <- c(make_option('--output', type='character', default='/dev/stdout'
                  make_option('--taxonomies', type='character'),
                  make_option('--normalize', type='character', default='none'),
                  make_option('--tree', type='character'),
-                 make_option('--site', type='character'),
+                 make_option('--site', type='character', default='all'),
                  make_option('--subset', type='character', help='subset expression', default='none'),
                  make_option('--shuffle', default=FALSE, action='store_true', help='randomize case/control assignments'),
                  make_option('--glom', default='none'))
@@ -44,8 +44,12 @@ dipp <- load.dipp(otu.table=options$otutable,
                   tax.table=options$taxonomies,
                   tree=options$tree)
 
-cat("Selecting from site:", options$site, "\n")
-dipp <- subset_samples(dipp, site == 'Turku')
+if (options$site != 'all') {
+    cat("Selecting from site:", options$site, "\n")
+    dipp <- subset_samples(dipp, site == 'Turku')
+} else {
+    message('Using samples from all sites')
+}
 
 dipp
 
