@@ -119,14 +119,12 @@ subsets <- subsets[unlist(keep)]
 sliding.avg <- lapply(1:length(subsets), function(i) {
   message('testing window ', i)
   mdat <- subsets[[i]]
-
   # downsample
-  ds <- ddply(mdat, ~variable + dipp_person, function(x) {
+  ds <- ddply(mdat, ~ variable + dipp_person, function(x) {
     c(seroconverted=x[1,]$seroconverted,
       value=median(x$value),
       age_at_sampling=median(x$age_at_sampling))
   })
-
   pvals <- ddply(ds, ~variable, function(x) {
       # run statistical tests
       p.glm <- boot(x, test_glm, R=options$bootstraps)$t0
