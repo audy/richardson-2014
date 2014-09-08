@@ -60,7 +60,6 @@ dipp-predicted.Rdata:
 		--unique \
 		--output $@ \
 		--normalize 'none' \
-		--site Turku \
 		--otutable '../data/otu-tables/predicted-dorei-vulgatus.csv' \
 		--subject-data $(SUBJECT_DATA) \
 		--sample-data $(SAMPLE_DATA) \
