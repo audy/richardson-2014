@@ -98,8 +98,8 @@ nrow(glms[glms$p.adjust < 0.001,])
 nrow(glms[glms$p.adjust < 0.01,])
 nrow(glms[glms$p.adjust < 0.05,])
 
-mdat$status <- 'Control'
-mdat[mdat$response,]$status <- 'Progressor'
+dat$status <- 'Control'
+dat[dat$response,]$status <- 'Case'
 
 source('lib/ggplot_theme.R')
 
