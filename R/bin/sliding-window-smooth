@@ -24,6 +24,9 @@ library(scales)
 library(reshape2)
 library(pROC)
 library(boot)
+library(ggthemr)
+
+ggthemr('fresh')
 
 source('lib/sliding_window.R')
 source('lib/ggplot_theme.R')
