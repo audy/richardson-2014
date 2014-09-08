@@ -1,6 +1,3 @@
 [submodule "data"]
 	path = data
-	url = git@github.org:audy/dipp-microbiome-study.git
-[submodule "python/run-picrust/picrust"]
-	path = python/run-picrust/picrust
-	url = https://github.com/picrust/picrust.git
+	url = git@github.com:audy/dipp-microbiome-study.git
