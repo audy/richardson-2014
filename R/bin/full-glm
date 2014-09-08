@@ -11,7 +11,6 @@ option_list <- c(make_option('--input', type='character', default='dipp-predicte
                  make_option('--out-table', default='glms.csv'),
                  make_option('--subset', default='none'),
                  make_option('--absolute', default=F, action='store_true'),
-                 make_option('--cores', default=24),
                  make_option('--response', default='seroconverted'),
                  make_option('--keep-1aa', default=F, action='store_true',
                              help='include single autoantibody subjects?'),
@@ -94,7 +93,8 @@ do_bootstrap <- function(m) {
   colnames(f) <- c('subject', 'frequency')
   m <- merge(m, f, id.x='subject', id.y='subject')
   m$weight <- 1/m$frequency
-  b <- boot(m, do_test, R=100, sim='balanced', weights=m$weight, parallel='multicore', ncpus=options$cores)
+  b <- boot(m, do_test,
+            R=n_bootstraps)
   b$t0
 }
 
