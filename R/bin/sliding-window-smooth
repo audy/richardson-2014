@@ -24,7 +24,6 @@ library(phyloseq)
 library(plyr)
 library(scales)
 library(reshape2)
-library(pROC)
 library(boot)
 library(ggthemr)
 
