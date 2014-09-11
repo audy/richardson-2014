@@ -126,7 +126,7 @@ autoimmunity-timing.pdf:
 	mv Rplots autoimmunity-timing.pdf
 
 # S Fig XX
-mw-all-%.pdf: dipp.rdata
+mw-all-%.pdf: dipp.Rdata
 	bin/all-sample-mw-test \
 		--input $< \
 		--pdf $@ \

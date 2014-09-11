@@ -3,12 +3,12 @@
 library(optparse)
 
 option_list <- c(make_option('--input', type='character', default='dipp.Rdata'),
-                 make_option('--rank', type='character', default='Phylum'),
+                 make_option('--rank', type='character', default='Genus'),
                  make_option('--output', type='character', default='models.rdata'),
                  make_option('--pdf', default='Rplots.pdf'),
                  make_option('--out-table', default='glms.csv'),
                  make_option('--subset', default='none'),
-                 make_option('--bootstraps', default=0),
+                 make_option('--bootstraps', default=100),
                  make_option('--absolute', default=F, action='store_true'),
                  make_option('--response', default='seroconverted'),
                  make_option('--keep-1aa', default=F, action='store_true',
@@ -27,6 +27,9 @@ library(reshape2)
 library(boot)
 library(scales)
 library(magrittr)
+library(doParallel)
+
+registerDoParallel(cores=8)
 
 load(options$input)
 
@@ -43,7 +46,6 @@ if (options$subset != 'none') {
 message('Agglomerating... get some coffee\n')
 dipp <- tax_glom(dipp, taxrank=options$rank)
 
-dipp <- subset_samples(dipp, age_at_sampling < 600)
 
 dat <- psmelt(dipp)
 
@@ -56,19 +58,15 @@ get_coeff <- function(dat) {
 }
 
 f1 <- Abundance ~ Gender + vaginal_delivery + Breast_feeding_any
-f2 <-  seroconverted ~ residuals:age_at_sampling
+f2 <-  seroconverted ~ Abundance:age_at_sampling
 
 print(f1)
 print(f2)
 
 do_test <- function(dat, i, ...) {
   ss <- dat[i,]
-  m0 <- glm(f1, data=ss)
-  print(anova(m0, test='F'))
-  ss$residuals <- residuals(m0)
   m <- glm(f2, data=ss, family=binomial(link='logit'))
   x <- anova(m, test='Chisq')
-  print(x)
   return(x[[5]][[2]])
 }
 
@@ -77,7 +75,7 @@ do_bootstrap <- function(m, n_bootstraps=10) {
   f <- data.frame(table(m$dipp_person))
   colnames(f) <- c('subject', 'frequency')
   m <- merge(m, f, id.x='subject', id.y='subject')
-  m$weight <- 1/m$frequency
+  m$weight <- m$frequency/sum(m$frequency)
   b <- boot(m, do_test,
             R=n_bootstraps)
   b$t0
@@ -87,8 +85,11 @@ do_bootstrap <- function(m, n_bootstraps=10) {
 # run tests!
 glms <- ddply(dat, ~variable, function(m) {
   message('testing variable: ', m$variable[1])
-  do_bootstrap(m, n_bootstraps=options$bootstraps)
-})
+#  p.value <- do_bootstrap(m, n_bootstraps=options$bootstraps)
+  p.value <- do_test(m, rownames(m))
+  message('p-value: ', p.value)
+  return(p.value)
+}, .parallel=T)
 
 glms <- glms[complete.cases(glms),]
 
@@ -136,7 +137,7 @@ plot_results <- function(alpha, min=0) {
              fill=status, color=status,
              linetype=status)) +
   geom_smooth(alpha=0.30,size=1) +
-  facet_wrap(~variable) +
+  facet_wrap(~variable, scale='free_y') +
   scale_x_continuous(breaks=seq(0, 48, by=3), limits=c(3, 30)) +
   scale_y_continuous(labels=scientific) +
   ggplot.theme +

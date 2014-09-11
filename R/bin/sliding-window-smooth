@@ -26,6 +26,7 @@ library(scales)
 library(reshape2)
 library(boot)
 library(ggthemr)
+library(pROC)
 
 ggthemr('fresh')
 
@@ -87,8 +88,7 @@ test_roc <- function(dat, i, ...) {
   ss <- dat[i,]
   m <- glm(seroconverted ~ value, data=ss, family=binomial(link='logit'))
   prob <- predict(m ,type=c("response"))
-  #as.numeric(roc(seroconverted ~ prob, data=ss)$auc)
-  0 # pROC wont install at the moment
+  as.numeric(roc(seroconverted ~ prob, data=ss)$auc)
 }
 
 test_mw <- function(dat, i, ...) {

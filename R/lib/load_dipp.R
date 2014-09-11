@@ -1,10 +1,10 @@
 #!/usr/bin/env rscript
 
-library(phyloseq)
 
 'load.dipp' <- function(otu.table=NULL, subject.data=NULL, sample.data=NULL,
                         sequencing.data = NULL, tax.table=NULL, tree=NULL) {
 
+  library(phyloseq)
   otus <- otu_table(read.csv(otu.table, header=T, row.names=1, check.names=F), taxa_are_rows=F)
 
   meta <- load_dipp_metadata(subject_data= subject.data,  sample_data=
@@ -37,6 +37,7 @@ fix_subject_columns <- function(df) {
         age_IA2A <- as.numeric(date_IA2A - DOB)
         age_ICA <- as.numeric(date_ICA - DOB)
         age_T1D <- as.numeric(date_T1D - DOB)
+        age_first_ab <- min(c(age_IAA, age_IA2A, age_ICA, age_GADA))
         vaginal_delivery <- (Mode_of_Delivery %in% c('vaginal', 'suction-cup', 'breech delivery'))
     })
     return(df)
@@ -60,12 +61,16 @@ merge_tables <- function(samples, subjects, sequences) {
   merged <- merge(subjects, m1, by.x='dipp_person', by.y='dipp_person')
 }
 
+load_dipp_subject_data <- function(csv_file) {
+  fix_subject_columns(read.csv(csv_file))
+}
+
 # practice merging
 
 load_dipp_metadata <- function(sample_data=NULL, subject_data=NULL,
                                sequencing_data=NULL) {
   samples <- fix_sample_columns(read.csv(sample_data))
-  subjects <- fix_subject_columns(read.csv(subject_data))
+  subjects <- load_dipp_subject_data(subject_data)
   sequencings <- read.csv(sequencing_data)
   merged <- merge_tables(samples, subjects, sequencings)
   fixed <- compute_derived_columns(merged)

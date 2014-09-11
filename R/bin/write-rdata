@@ -11,9 +11,11 @@ library(optparse)
 first <- function(x) x[1,]
 
 option_list <- c(make_option('--output', type='character', default='/dev/stdout'),
-                 make_option('--unique', type='logical', default=FALSE, action='store_true'),
+                 make_option('--unique', type='logical', default=FALSE,
+                             action='store_true'),
                  make_option('--depth', type='numeric', default=10000),
-                 make_option('--proportion', type='logical', action='store_true', default=FALSE),
+                 make_option('--proportion', type='logical',
+                             action='store_true', default=FALSE),
                  make_option('--otutable', type='character'),
                  make_option('--sample-data', type='character'),
                  make_option('--subject-data', type='character'),
@@ -22,8 +24,10 @@ option_list <- c(make_option('--output', type='character', default='/dev/stdout'
                  make_option('--normalize', type='character', default='none'),
                  make_option('--tree', type='character'),
                  make_option('--site', type='character', default='all'),
-                 make_option('--subset', type='character', help='subset expression', default='none'),
-                 make_option('--shuffle', default=FALSE, action='store_true', help='randomize case/control assignments'),
+                 make_option('--subset', type='character', help='subset
+                             expression', default='none'),
+                 make_option('--shuffle', default=FALSE, action='store_true',
+                             help='randomize case/control assignments'),
                  make_option('--glom', default='none'))
 
 parser <- OptionParser(option_list = option_list)

@@ -21,7 +21,7 @@ library(phyloseq)
 
 # load sample data.
 
-load('dipp-rf-uniq.RData')
+load('dipp.Rdata')
 dat <- data.frame(sample_data(dipp))
 
 # calculate stats for prediction results.

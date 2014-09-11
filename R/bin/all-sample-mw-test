@@ -3,12 +3,12 @@
 library(optparse)
 library(perm)
 
-option_list <- c(make_option('--input', default='dipp-rf-uniq.RData'),
-                 make_option('--rank', default='Phylum'),
+option_list <- c(make_option('--input', default='dipp.Rdata'),
+                 make_option('--rank', default='Genus'),
                  make_option('--fdr', default='BH'),
                  make_option('--table-out', default='/dev/null'),
                  make_option('--pdf', default='Rplots.pdf'),
-                 make_option('--bootstrap', default=F, action='store_true')
+                 make_option('--bootstrap', default=T, action='store_true')
                 )
 
 parser <- OptionParser(option_list = option_list)
@@ -53,7 +53,6 @@ do_test_mw <- function(x, ind, ...) {
   wilcox.test(value ~ response, data=x[ind,])$p.value
 }
 
-
 tests <- ddply(mdat, ~variable, function(x) {
   cat('.')
   if (options$bootstrap == T) {
@@ -61,10 +60,10 @@ tests <- ddply(mdat, ~variable, function(x) {
     f <- data.frame(table(x$subject))
     colnames(f) <- c('subject', 'frequency')
     x <- merge(x, f, id.x='subject', id.y='subject')
-    x$weight <- 1/x$frequency
-    pt <- boot(x, do_test_perm, R=100, sim='balanced', weigths=x$weight)
+    x$weight <- x$frequency/sum(x$frequency)
+#    pt <- boot(x, do_test_perm, R=100, sim='balanced', weigths=x$weight)
     mw <- boot(x, do_test_mw, R=100, sim='balanced', weights=x$weight)
-    c(p.pt=pt$t0, p.mw=mw$t0)
+    c(p.mw=mw$t0)
   } else {
     c(p.pt=do_test_perm(x, rownames(x)), p.mw=do_test_mw(x, rownames(x)))
   }
@@ -76,7 +75,6 @@ stats <- ddply(mdat, ~ variable + response, function(x) {
   x <- merge(x, f, id.x='subject', id.y='subject')
   x$weight <- 1/x$frequency
   error <- se(x$value)
-  print(error)
  c(median=median(x$value),
    sd=sd(x$value),
    IQR=IQR(x$value),
@@ -86,7 +84,6 @@ stats <- ddply(mdat, ~ variable + response, function(x) {
 
 stats$se <- stats$sd/sqrt(length(unique(mdat$subject)))
 
-tests$p.pt.adjusted <- p.adjust(tests$p.pt, options$fdr)
 tests$p.mw.adjusted <- p.adjust(tests$p.mw, options$fdr)
 
 tests$significant <- tests$p.mw.adjusted < 0.001
@@ -94,44 +91,6 @@ tests$significant <- tests$p.mw.adjusted < 0.001
 cat(nrow(tests[tests$significant,]), 'taxa passed FDR at p < 0.001\n')
 
 merged <- merge(stats, tests)
-
-significant <- merged[merged$significant,]
-
-dodge <- position_dodge(width=0.9)
-
-#
-# BARGRAPHS
-#
-
-bargraphs <- ggplot(significant,
-         aes(x='x',
-             y=median,
-             fill=response)) +
-  geom_bar(stat='identity', position=dodge) +
-  xlab(options$rank) +
-  facet_wrap(~variable, scale='free_y') +
-  geom_errorbar(aes(ymin = median - se, ymax = median + se), position=dodge, width=0.25) +
-  ggplot.theme +
-  ggplot.pal.scale
-
-print(bargraphs)
-print(bargraphs + scale_y_log10())
-
-#
-# BOXPLOTS
-#
-boxplots <- ggplot(mdat[mdat$variable %in% significant$variable,],
-         aes(x=response,
-             y=value,
-             fill=response)) +
-  facet_wrap(~variable, scale='free_y') +
-  geom_boxplot() +
-  ggplot.theme +
-  ggplot.pal.scale
-
-print(boxplots)
-
-print(boxplots + scale_y_log10())
 
 # calculate higher in controls or higher in cases?
 with_ratios <- ddply(merged, ~ variable, function(x) {
@@ -151,7 +110,6 @@ write.csv(merged, file=options$`table-out`)
 # Generate table for publication
 #
 
-library(pander)
 
 m.cases <- merged[merged$response,]
 m.controls <- merged[!merged$response,]
@@ -161,7 +119,6 @@ tab <- data.frame(variable=m.cases$variable,
                   significant=m.cases$significant,
                   prog_range= sprintf('%.2g to %.2g', 100*m.cases$e.1, 100*m.cases$e.2),
                   cont_range= sprintf('%.2g to %.2g', 100*m.controls$e.1, 100*m.controls$e.2),
-                  p_perm_ts_adj= sprintf('%.4g', m.cases$p.pt.adjusted),
                   p_mw_adj= sprintf('%.4g', m.cases$p.mw.adjusted),
                   median_prog=m.cases$median,
                   median_cont=m.controls$median)

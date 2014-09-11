@@ -1,8 +1,5 @@
 #!/usr/bin/env rscript
 library(ggplot2)
-library(ggthemr)
-
-ggthemr('fresh') # use fresh but then change some stuff.
 
 ggplot.theme <- theme(panel.background = element_blank(),
                       strip.background = element_blank(),
