@@ -50,7 +50,8 @@ dipp <- load.dipp(otu.table=options$otutable,
 
 if (options$site != 'all') {
     cat("Selecting from site:", options$site, "\n")
-    dipp <- subset_samples(dipp, site == 'Turku')
+    siteiwant <- options$site
+    dipp <- subset_samples(dipp, site == siteiwant)
 } else {
     message('Using samples from all sites')
 }
