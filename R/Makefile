@@ -77,6 +77,10 @@ dipp-raw.Rdata:
 	    --sequencing-data $(SEQUENCING_DATA) \
 	    --taxonomies '../data/taxonomy-tables/greengenes-taxonomies.csv'
 
+dipp-site-%.Rdata:
+	SITE=$* make dipp.Rdata
+	mv dipp.Rdata $@
+
 # core data object
 # generates an rdata file containing a phyloseq dataset w/ main
 # experimental data (subject data, sample data, otu table, taxonomies)
