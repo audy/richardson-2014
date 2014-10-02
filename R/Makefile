@@ -26,7 +26,7 @@ SEQUENCING_DATA?='../data/dipp-sequencing-runs.csv'
 
 TREE?='../data/phylogenetic-trees/97-otus.tree'
 
-SITE?='Turku'
+SITE?='all'
 
 ##
 # MISC PARAMETERS
@@ -86,7 +86,6 @@ dipp.Rdata:
 		--output $@ \
 		--normalize $(NORMALIZE) \
 		--proportion \
-		--site Turku \
 		--site $(SITE) \
 		--otutable $(OTU_TABLE) \
 		--subject-data $(SUBJECT_DATA) \
