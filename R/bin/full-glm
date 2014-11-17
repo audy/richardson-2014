@@ -67,6 +67,7 @@ do_test <- function(dat, i, ...) {
   ss <- dat[i,]
   m <- glm(f2, data=ss, family=binomial(link='logit'))
   x <- anova(m, test='Chisq')
+  print(x)
   return(x[[5]][[2]])
 }
 
@@ -99,8 +100,7 @@ nrow(glms[glms$p.adjust < 0.001,])
 nrow(glms[glms$p.adjust < 0.01,])
 nrow(glms[glms$p.adjust < 0.05,])
 
-dat$status <- 'Control'
-dat[dat$response,]$status <- 'Case'
+dat$status <- factor(dat$response, labels = c('Control', 'Case'))
 
 source('lib/ggplot_theme.R')
 
@@ -131,6 +131,10 @@ plot_results <- function(alpha, min=0) {
   dat.s <- subset(dat.s, variable %in% top$variable)
   dat.s$variable <- factor(dat.s$variable, levels=unique(dat.s[with(dat.s, order(-Abundance)),]$variable))
   cat(nrow(dat.s), '\n')
+
+  # so ggplot2 doesnt randomly switch colors !!
+  cols <- c(Control="#999999", Case="#FFAB00")
+
   p<-ggplot(dat.s,
          aes(x=age_at_sampling/30,
              y=Abundance,
@@ -141,10 +145,8 @@ plot_results <- function(alpha, min=0) {
   scale_x_continuous(breaks=seq(0, 48, by=3), limits=c(3, 30)) +
   scale_y_continuous(labels=scientific) +
   ggplot.theme +
-  scale_color_manual(values=c("#999999",
-                             "#FFAB00")) +
-  scale_fill_manual(values=c("#999999",
-                             "#FFAB00")) +
+  scale_color_manual(values=cols) +
+  scale_fill_manual(values=cols) +
   ggtitle(paste(options$rank, ' (alpha = ', alpha, ')', sep='')) +
   geom_vline(x=479/30, color='purple', alpha=0.75) +
   geom_vline(x=(479-68)/30, linetype='dashed', color='purple', alpha=0.75) +
