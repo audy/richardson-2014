@@ -26,7 +26,7 @@ SEQUENCING_DATA?='../data/dipp-sequencing-runs.csv'
 
 TREE?='../data/phylogenetic-trees/97-otus.tree'
 
-SITE?='all'
+SITE?='Turku'
 
 ##
 # MISC PARAMETERS
@@ -95,8 +95,7 @@ dipp.Rdata:
 		--subject-data $(SUBJECT_DATA) \
 		--sample-data $(SAMPLE_DATA) \
 		--sequencing-data $(SEQUENCING_DATA) \
-		--taxonomies $(TAXONOMIES) \
-		--proportion
+		--taxonomies $(TAXONOMIES)
 
 dipp-miseq.Rdata:
 	bin/write-rdata \
@@ -113,7 +112,7 @@ dipp-miseq.Rdata:
 		--proportion
 
 
-sliding-window-diversity.pdf: dipp-for-richness.rdata
+sliding-window-diversity.pdf: dipp.Rdata
 	bin/sliding-window-diversity \
 		--input $< \
 		--output $@ \
@@ -196,8 +195,8 @@ rank_tables:
 
 # builds OTU tables with names at specific rank
 # useful for people who like to stare at Excel
-rank_tables/%.csv: rank_tables dipp.rdata
+rank_tables/%.csv: rank_tables dipp-raw.Rdata
 	bin/make-rank-table \
 	    --rank $* \
 	    --output $@ \
-	    --input dipp.rdata
+	    --input dipp-raw.rdata
