@@ -4,16 +4,22 @@ After cloning this repo, download the data:
 
 `git submodule update --init --recursive`
 
-Install R and [Packrat](http://rstudio.github.io/packrat/).
+# Installation
 
-Start R in the R directory. Packrat should start installing dependencies
-automatically.
+R v3.1.1 with dependencies:
+
+- Phyloseq 
+
+```R
+source("http://bioconductor.org/biocLite.R")
+biocLite("phyloseq") # grab some tea
 ```
-cd R/
-R # you should see packrat start to install dependencies
+
+- dplyr, plyr, ggplot2, reshape2, magrittr
+
+```R
+install.packages(c('dplyr', 'plyr', 'ggplot2', 'reshape2', 'magrittr'))
 ```
-After that (hopefully) finishes, exit R and type `make`. Get some coffee. There
-should be some figures when you come back.
 
 ## Instructions for generating figures
 
@@ -37,6 +43,7 @@ I didn't automate this step. Sorry.
 ### Figure 4 - Timing of Autoimmunity
 
 `make autoimmunity-timing.pdf`
+
 
 ## License
 
@@ -62,3 +69,4 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
