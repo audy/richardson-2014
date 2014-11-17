@@ -80,7 +80,9 @@ subsets <- generate_subsets(phy, start_times, options$width)
 test_glm <- function(dat, i, ...) {
   ss <- dat[i,]
   m <- glm(seroconverted ~ value, data=ss, family=binomial(link='logit'))
-  p.value <- anova(m, test='Chisq')[[5]][[2]]
+  r <- anova(m, test='Chisq')
+  print(r)
+  p.value <- r[[5]][[2]]
   return(p.value)
 }
 
