@@ -26,6 +26,11 @@ otus <- data.frame(otu_table(glom), check.names=F)
 
 names <- data.frame(tax_table(glom))[,options$rank]
 
+# combine Genus and species names
+if (options$rank == 'Species') {
+  names <- paste(data.frame(tax_table(glom))[,'Genus'], names)
+}
+
 colnames(otus) <- names
 
 write.csv(otus, file=options$output)
