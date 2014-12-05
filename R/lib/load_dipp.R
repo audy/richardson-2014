@@ -20,7 +20,15 @@
 
   if (!is.null(tree)) tree <- read_tree_greengenes(tree)
 
-  phyloseq(otus, meta, taxa, tree)
+  phy <- phyloseq(otus, meta, taxa, tree)
+ 
+  # old school way of getting rid of tech reps
+  phy <- consolidate_technical_replicates(phy)
+
+  # remove 1AA cases
+  phy <- subset_samples(phy, aa_number != 1)
+
+  phy
 }
 
 fix_subject_columns <- function(df) {
@@ -40,6 +48,11 @@ fix_subject_columns <- function(df) {
         vaginal_delivery <- (Mode_of_Delivery %in% c('vaginal', 'suction-cup', 'breech delivery'))
     })
     return(df)
+}
+
+
+consolidate_technical_replicates <- function(phy) {
+  subset_samples(phy, !duplicated(sample_id))
 }
 
 # coerve columns
